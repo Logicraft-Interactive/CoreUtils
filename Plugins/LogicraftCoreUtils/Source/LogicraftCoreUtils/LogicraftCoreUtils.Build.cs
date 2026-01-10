@@ -1,10 +1,10 @@
-// Some copyright should be here...
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
-public class CoreUtils : ModuleRules
+public class LogicraftCoreUtils : ModuleRules
 {
-	public CoreUtils(ReadOnlyTargetRules Target) : base(Target)
+	public LogicraftCoreUtils(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		

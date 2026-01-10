@@ -1,10 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 
 #include "Modules/ModuleManager.h"
 
-class FCoreUtilsModule : public IModuleInterface
+class FLogicraftCoreUtilsModule : public IModuleInterface
 {
 public:
 

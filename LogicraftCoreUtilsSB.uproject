@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "CoreUtilsSandbox",
+			"Name": "LogicraftCoreUtilsSB",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
@@ -17,6 +17,10 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "LogicraftCoreUtils",
+			"Enabled": true
 		}
 	]
 }

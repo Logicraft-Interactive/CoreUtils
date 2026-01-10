@@ -2,13 +2,13 @@
 
 using UnrealBuildTool;
 
-public class CoreUtilsSandbox : ModuleRules
+public class LogicraftCoreUtilsSB : ModuleRules
 {
-	public CoreUtilsSandbox(ReadOnlyTargetRules Target) : base(Target)
+	public LogicraftCoreUtilsSB(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "CoreUtils" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "LogicraftCoreUtils" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

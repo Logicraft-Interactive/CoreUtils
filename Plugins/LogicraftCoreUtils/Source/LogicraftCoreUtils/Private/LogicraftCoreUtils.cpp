@@ -1,22 +1,20 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "CoreUtils.h"
+#include "LogicraftCoreUtils.h"
 
-#define LOCTEXT_NAMESPACE "FCoreUtilsModule"
+#define LOCTEXT_NAMESPACE "FLogicraftCoreUtilsModule"
 
-void FCoreUtilsModule::StartupModule()
+void FLogicraftCoreUtilsModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
-	
 }
 
-void FCoreUtilsModule::ShutdownModule()
+void FLogicraftCoreUtilsModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
-	
 }
 
 #undef LOCTEXT_NAMESPACE
 	
-IMPLEMENT_MODULE(FCoreUtilsModule, CoreUtils)
+IMPLEMENT_MODULE(FLogicraftCoreUtilsModule, LogicraftCoreUtils)

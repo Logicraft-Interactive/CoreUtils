@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class CoreUtilsSandboxTarget : TargetRules
+public class LogicraftCoreUtilsSBTarget : TargetRules
 {
-	public CoreUtilsSandboxTarget(TargetInfo Target) : base(Target)
+	public LogicraftCoreUtilsSBTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 
-		ExtraModuleNames.AddRange( new string[] { "CoreUtilsSandbox" } );
+		ExtraModuleNames.AddRange( new string[] { "LogicraftCoreUtilsSB" } );
 	}
 }
