@@ -1,0 +1,10 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "Chain.h"
+#include "LogCategory.h"
+
+void Chain::Private::ChainLog(const FString& Msg)
+{
+	UE_LOG(LogLCU, Warning, TEXT("%s"), *Msg);
+}
