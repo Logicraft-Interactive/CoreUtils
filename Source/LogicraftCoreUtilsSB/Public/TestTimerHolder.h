@@ -12,15 +12,14 @@ class LOGICRAFTCOREUTILSSB_API ATestTimerHolder : public AActor
 {
 	GENERATED_BODY()
 
-	FTimerHolder TimerHolder;
+	FTimerHolder LambdaTimerHolder;
+	FTimerHolder MemberTimerHolder;
 	
 public:
 	ATestTimerHolder();
 
 protected:
 	virtual void BeginPlay() override;
-
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	void TimerFunction();
 };

@@ -14,9 +14,15 @@ namespace Concepts
 
 	template<typename TCallable, typename ...TArgs>
 	concept Invocable = std::invocable<TCallable, TArgs...>;
-}
+} // Concepts
 
-struct FTimerParameters
+namespace TypeTraits
+{
+	template<typename TCallable, typename ...TArgs>
+	static constexpr bool IsInvocable_V = std::is_invocable_v<TCallable, TArgs...>;
+} // TypeTraits
+
+struct LOGICRAFTCOREUTILS_API FTimerParameters
 {
 	bool bIsLooping{ false };
 	float Rate{ 0.f };
@@ -29,25 +35,45 @@ struct FTimerParameters
 class LOGICRAFTCOREUTILS_API FTimerHolder
 {
 	FTimerManager* TimerManager{ nullptr };
-	FTimerHandle TimerHandle;
+	FTimerHandle TimerHandle{};
+	
 public:
 	FTimerHolder() = default;
 	~FTimerHolder();
-	
-	FTimerHandle ScheduleTimer(const FTimerDelegate& TimerDelegate, const FTimerParameters TimerParameters);
-	FTimerHandle ScheduleTimer(const FTimerDynamicDelegate& TimerDelegate, const FTimerParameters TimerParameters);
-	FTimerHandle ScheduleTimer(TFunction<void()>&& TimerDelegate, const FTimerParameters TimerParameters);
 
-	template <Concepts::DerivedFromObject TObject, typename TMethod>
-		requires Concepts::Invocable<TMethod, TObject>
-	FTimerHandle ScheduleTimer(TObject* Object, TMethod&& TimerDelegate, const FTimerParameters TimerParameters)
+	template<typename TCallable>
+	FTimerHandle Schedule(TCallable&& TimerCallback, const FTimerParameters TimerParameters)
 	{
-		RetrieveTimerManager();
+		if (RetrieveTimerManager())
+		{
+			TimerManager->SetTimer(TimerHandle, Forward<TCallable>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
+		}
 		
-		TimerManager->SetTimer(TimerHandle, Object, Forward<TMethod>(TimerDelegate), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);
 		return TimerHandle;
 	}
 
+	template <Concepts::DerivedFromObject TObject, typename TMethod>
+		requires Concepts::Invocable<TMethod, TObject>
+	FTimerHandle Schedule(TObject* Object, TMethod&& TimerCallback, const FTimerParameters TimerParameters)
+	{
+		if (RetrieveTimerManager())
+		{
+			TimerManager->SetTimer(TimerHandle, Object, Forward<TMethod>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
+		}
+		
+		return TimerHandle;
+	}
+
+	void Pause() const;
+	void Clear();
+
+	bool IsPaused() const;
+	bool IsAlreadyRunning() const;
+
+	float GetElapsedTime() const;
+	float GetRate() const;
+	float GetRemainingTime() const;
+
 private:
-	void RetrieveTimerManager();
+	bool RetrieveTimerManager();
 };

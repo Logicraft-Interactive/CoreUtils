@@ -5,47 +5,69 @@
 
 FTimerHolder::~FTimerHolder()
 {
-	if (!TimerManager)
+	if (TimerManager)
 	{
-		return;
+		Clear();	
 	}
+}
 
+void FTimerHolder::Pause() const
+{
+	check(TimerManager != nullptr);
+	TimerManager->PauseTimer(TimerHandle);
+}
+
+void FTimerHolder::Clear()
+{
+	check(TimerManager != nullptr);
 	TimerManager->ClearTimer(TimerHandle);
 }
 
-FTimerHandle FTimerHolder::ScheduleTimer(const FTimerDelegate& TimerDelegate, const FTimerParameters TimerParameters)
+bool FTimerHolder::IsPaused() const
 {
-	RetrieveTimerManager();
-	
-	TimerManager->SetTimer(TimerHandle, TimerDelegate, TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);
-	return TimerHandle;
+	check(TimerManager != nullptr);
+	return TimerManager->IsTimerPaused(TimerHandle);
 }
 
-FTimerHandle FTimerHolder::ScheduleTimer(const FTimerDynamicDelegate& TimerDelegate, const FTimerParameters TimerParameters)
+bool FTimerHolder::IsAlreadyRunning() const
 {
-	RetrieveTimerManager();
-	
-	TimerManager->SetTimer(TimerHandle, TimerDelegate, TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);
-	return TimerHandle;
+	check(TimerManager != nullptr);
+	return TimerManager->TimerExists(TimerHandle);
 }
 
-FTimerHandle FTimerHolder::ScheduleTimer(TFunction<void()>&& TimerDelegate, const FTimerParameters TimerParameters)
+float FTimerHolder::GetElapsedTime() const
 {
-	RetrieveTimerManager();
-	
-	TimerManager->SetTimer(TimerHandle, MoveTemp(TimerDelegate), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);
-	return TimerHandle;
+	check(TimerManager != nullptr);
+	return TimerManager->GetTimerElapsed(TimerHandle);
 }
 
-void FTimerHolder::RetrieveTimerManager()
+float FTimerHolder::GetRate() const
+{
+	check(TimerManager != nullptr);
+	return TimerManager->GetTimerRate(TimerHandle);
+}
+
+float FTimerHolder::GetRemainingTime() const
+{
+	check(TimerManager != nullptr);
+	return TimerManager->GetTimerRemaining(TimerHandle);
+}
+
+bool FTimerHolder::RetrieveTimerManager()
 {
 	if (TimerManager)
 	{
-		return;
+		return true;
 	}
 	
-	if (UWorld* World{ GEngine->GetWorld() })
+	for (const FWorldContext& Context : GEngine->GetWorldContexts())
 	{
-		TimerManager = &World->GetTimerManager();
+		if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
+		{
+			TimerManager = &Context.World()->GetTimerManager();
+			return true;
+		}
 	}
+	
+	return false;
 }
