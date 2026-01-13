@@ -1,7 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "TestingActor.h"
+﻿#include "TestingActor.h"
 
 #include "TimerHolderSubsystem.h"
 
@@ -18,15 +15,25 @@ void ATestingActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UTimerHolderSubsystem::StartTimer(this, []()
+	UTimerHolderSubsystem::ScheduleTimer(this, []()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Start timer log"))
-	}, 10.f, false);
+	}, { .Rate = 10.f });
+
+	UTimerHolderSubsystem::ScheduleTimer(this, &ATestingActor::TimerFunction, { .Rate = 10.f });
+}
+
+void ATestingActor::TimerFunction()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Start timer log in a function"))
 }
 
 // Called every frame
 void ATestingActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	UTimerHolderSubsystem::CancelTimer(this, ETimerScope::ContextBound);
+	UTimerHolderSubsystem::CancelTimer(this);
 }
 
