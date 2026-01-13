@@ -13,26 +13,26 @@ void ATestTimerHolder::BeginPlay()
 {
 	Super::BeginPlay();
 
-	TimerHandle = UTimerHolderSubsystem::ScheduleTimer(this, []()
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Start timer log"))
-	}, { .Rate = 10.f });
-
-	UTimerHolderSubsystem::ScheduleTimer(this, []()
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Start timer log"))
-	}, { .Rate = 10.f }, ETimerScope::ContextBound);
-
-	UTimerHolderSubsystem::ScheduleTimer(this, &ATestTimerHolder::TimerFunction, { .Rate = 10.f });
+	// TimerHandle = UTimerHolderSubsystem::ScheduleTimer(this, []()
+	// {
+	// 	UE_LOG(LogTemp, Warning, TEXT("Start timer log"))
+	// }, { .Rate = 10.f });
+	//
+	// UTimerHolderSubsystem::ScheduleTimer(this, []()
+	// {
+	// 	UE_LOG(LogTemp, Warning, TEXT("Start timer log"))
+	// }, { .Rate = 10.f }, ETimerScope::ContextBound);
+	//
+	// UTimerHolderSubsystem::ScheduleTimer(this, &ATestTimerHolder::TimerFunction, { .Rate = 10.f });
 }
 
 void ATestTimerHolder::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	UTimerHolderSubsystem::CancelTimer(this, TimerHandle);
-	UTimerHolderSubsystem::CancelTimer(this);
-	UTimerHolderSubsystem::CancelTimer(this, ETimerScope::ContextBound);
+	// UTimerHolderSubsystem::CancelTimer(this, TimerHandle);
+	// UTimerHolderSubsystem::CancelTimer(this);
+	// UTimerHolderSubsystem::CancelTimer(this, ETimerScope::ContextBound);
 }
 
 void ATestTimerHolder::TimerFunction()

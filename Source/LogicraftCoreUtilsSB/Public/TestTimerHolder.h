@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TimerHolder.h"
 #include "GameFramework/Actor.h"
 #include "TestTimerHolder.generated.h"
 
@@ -11,7 +12,7 @@ class LOGICRAFTCOREUTILSSB_API ATestTimerHolder : public AActor
 {
 	GENERATED_BODY()
 
-	FTimerHandle TimerHandle;
+	FTimerHolder TimerHolder;
 	
 public:
 	ATestTimerHolder();
