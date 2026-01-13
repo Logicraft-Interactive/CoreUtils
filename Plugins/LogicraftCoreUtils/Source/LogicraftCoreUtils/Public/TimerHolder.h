@@ -44,7 +44,7 @@ public:
 	template<typename TCallable>
 	FTimerHandle Schedule(TCallable&& TimerCallback, const FTimerParameters TimerParameters)
 	{
-		if (RetrieveTimerManager())
+		if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))
 		{
 			TimerManager->SetTimer(TimerHandle, Forward<TCallable>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
 		}
@@ -56,7 +56,7 @@ public:
 		requires Concepts::Invocable<TMethod, TObject>
 	FTimerHandle Schedule(TObject* Object, TMethod&& TimerCallback, const FTimerParameters TimerParameters)
 	{
-		if (RetrieveTimerManager())
+		if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))
 		{
 			TimerManager->SetTimer(TimerHandle, Object, Forward<TMethod>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
 		}

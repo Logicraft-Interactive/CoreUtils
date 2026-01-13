@@ -5,15 +5,12 @@
 
 FTimerHolder::~FTimerHolder()
 {
-	if (TimerManager)
-	{
-		Clear();	
-	}
+	Clear();
 }
 
 void FTimerHolder::Pause()
 {
-	if (RetrieveTimerManager())
+	if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))
 	{
 		TimerManager->PauseTimer(TimerHandle);
 	}
@@ -21,7 +18,7 @@ void FTimerHolder::Pause()
 
 void FTimerHolder::Clear()
 {
-	if (RetrieveTimerManager())
+	if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))
 	{
 		TimerManager->ClearTimer(TimerHandle);
 	}
