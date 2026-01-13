@@ -13,11 +13,11 @@ ATestChaining::ATestChaining()
 
 	RootComponent = CreateDefaultSubobject<USceneComponent>("Root");
 	
-	// CameraComponent = CreateDefaultSubobject<UCameraComponent>("Camera Component");
-	// if (RootComponent)
-	// {
-	// 	CameraComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
-	// }
+	CameraComponent = CreateDefaultSubobject<UCameraComponent>("Camera Component");
+	if (RootComponent)
+	{
+		CameraComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform);
+	}
 }
 
 // Called when the game starts or when spawned
@@ -25,16 +25,17 @@ void ATestChaining::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Chain::StartChain(CameraComponent)
-	.Transform([](UCameraComponent* Camera)
-	{
-		UE_LOG(LogTemp, Error, TEXT("Passing into Transform from Chain"));
-		return Camera->GetAttachmentRoot();
-	})
+	auto Name = Chain::StartChain(CameraComponent)
+	.Transform(&UCameraComponent::GetAttachmentRoot)
 	.Execute([](USceneComponent* SceneComponent)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Passing into Execute from Chain"));
 		SceneComponent->bHiddenInGame = false;
+	})
+	.Cast<UObject>()
+	.GetValue([](const UObject* Object)
+	{
+		return Object->GetName();
 	});
 
 	Chain::Execute(CameraComponent, [](const UCameraComponent* Camera)
