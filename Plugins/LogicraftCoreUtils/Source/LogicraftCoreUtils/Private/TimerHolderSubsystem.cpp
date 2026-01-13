@@ -75,7 +75,11 @@ void UTimerHolderSubsystem::CancelTimer(UObject* Object)
 		{
 			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);
 		}
+
+		UE_LOG(LogTemp, Warning, TEXT("Passed"))
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Cleared Context bound timer with %p [OwnerBoundTimers size : %d]"), Object, TimerHolderSubsystem->OwnerBoundTimers.Num())
 }
 
 void UTimerHolderSubsystem::CancelTimer(const UObject* WorldContext, FTimerHandle& TimerHandle, ETimerScope TimerScope)
@@ -88,8 +92,10 @@ void UTimerHolderSubsystem::CancelTimer(const UObject* WorldContext, FTimerHandl
 	{
 		if (TimerHolderSubsystem->UnboundActiveTimers.Remove(TimerHandle))
 		{
-			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);	
+			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);
+			UE_LOG(LogTemp, Warning, TEXT("Cleared Global timer [UnboundActiveTimers size : %d]"), TimerHolderSubsystem->UnboundActiveTimers.Num())
 		}
+		
 		return;
 	}
 
@@ -97,7 +103,8 @@ void UTimerHolderSubsystem::CancelTimer(const UObject* WorldContext, FTimerHandl
 	{
 		if (ActiveTimerRegistry->Remove(TimerHandle))
 		{
-			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);	
+			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);
+			UE_LOG(LogTemp, Warning, TEXT("Cleared Context bound timer with %p [UnboundActiveTimers size : %d]"), WorldContext, TimerHolderSubsystem->UnboundActiveTimers.Num())
 		}
 	}
 }

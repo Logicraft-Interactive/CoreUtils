@@ -4,7 +4,7 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "TimerHolderSubsystem.generated.h"
 
-namespace Details
+namespace Private
 {
 	namespace Concepts
 	{
@@ -86,7 +86,7 @@ public:
 	 * @param TimerParameters Parameters configuration (Rate, Loop, Delay).
 	 * @return A handle to the scheduled timer. Returns an invalid handle if Rate is <= 0.
 	 */
-	template <Details::Concepts::DerivedFromActor TActor>
+	template <Private::Concepts::DerivedFromActor TActor>
 	static FTimerHandle ScheduleTimer(TActor* Actor, FTimerDelegate::TMethodPtr<TActor> TimerDelegate,
 	                                  FTimerParameters TimerParameters)
 	{
@@ -108,7 +108,7 @@ public:
 	 * @param TimerParameters Parameters configuration (Rate, Loop, Delay).
 	 * @return A handle to the scheduled timer. Returns an invalid handle if Rate is <= 0.
 	 */
-	template <Details::Concepts::DerivedFromActor TActor>
+	template <Private::Concepts::DerivedFromActor TActor>
 	static FTimerHandle ScheduleTimer(TActor* Actor, FTimerDelegate::TConstMethodPtr<TActor> TimerDelegate,
 	                                  FTimerParameters TimerParameters)
 	{
@@ -147,7 +147,7 @@ public:
 	 * - ETimerScope::Global: Performs a full cleanup using the engine's native ClearAllTimersForObject (stops ALL timers on this actor).
 	 * - ETimerScope::ContextBound: Only cancels timers specifically registered to this Actor within this subsystem's tracking map.
 	 */
-	template <Details::Concepts::DerivedFromActor TActor>
+	template <Private::Concepts::DerivedFromActor TActor>
 	static void CancelTimer(TActor* Actor, ETimerScope TimerScope = ETimerScope::Global)
 	{
 		//TODO : Put chain verification for null pointer.
@@ -160,7 +160,6 @@ public:
 
 		ThisClass* TimerHolderSubsystem{ Get(Actor) };
 		TimerHolderSubsystem->GetTimerManager().ClearAllTimersForObject(Actor);
-		Actor->OnDestroyed.RemoveAll(TimerHolderSubsystem);
 	}
 
 	virtual void Deinitialize() override;
@@ -191,12 +190,14 @@ private:
 			if (TimerScope == ETimerScope::Global)
 			{
 				UnboundActiveTimers.Remove(*TimerHandle);
+				UE_LOG(LogTemp, Warning, TEXT("Removed Unbound timer [UnboundActiveTimers size : %d]"), UnboundActiveTimers.Num())
 				return;
 			}
 
 			if (FActiveTimerRegistry* TimerHandleMap { OwnerBoundTimers.Find(WorldContext) })
 			{
-				TimerHandleMap->Remove(*TimerHandle);	
+				TimerHandleMap->Remove(*TimerHandle);
+				UE_LOG(LogTemp, Warning, TEXT("Unbound timer to %p [OwnerBoundTimers size : %d]"), WorldContext, UnboundActiveTimers.Num())
 			}
 		};
 
@@ -207,16 +208,19 @@ private:
 		{
 			FActiveTimerRegistry& TimerHandleSet{ OwnerBoundTimers.FindOrAdd(WorldContext) };
 			TimerHandleSet.Add(*TimerHandle);
+
+			UE_LOG(LogTemp, Warning, TEXT("Bound timer to %p [OwnerBoundTimers size : %d]"), WorldContext, OwnerBoundTimers.Num())
 		}
 		else
 		{
 			UnboundActiveTimers.Add(*TimerHandle);
+			UE_LOG(LogTemp, Warning, TEXT("Registered Unbound timer with the help of %p"), WorldContext)
 		}
 
 		return *TimerHandle;
 	}
 
-	template <Details::Concepts::DerivedFromActor TActor, typename TFunc>
+	template <Private::Concepts::DerivedFromActor TActor, typename TFunc>
 		requires std::invocable<TFunc, TActor>
 	FTimerHandle Internal_BindTimerToActor(TActor* Actor, TFunc Function, FTimerParameters TimerParameters)
 	{
