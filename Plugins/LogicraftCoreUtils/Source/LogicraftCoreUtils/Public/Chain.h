@@ -142,11 +142,10 @@ namespace Chain
            */
           template<typename Func>
           auto Transform(const Func& Function, const std::source_location& SourceLocation = std::source_location::current())
-          -> TChain<std::remove_pointer_t<decltype(std::invoke(Function, std::declval<T*>()))>>
+          -> TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
           {  
-             // Deduce the return type of the function to determine the new Chain type.
-             using ResultType = decltype(std::invoke(Function, std::declval<T*>())); 
-             using NewType = std::remove_pointer_t<ResultType>;
+             // Deduce the return type of the function to determine the new Chain type. 
+             using NewType = std::remove_pointer_t<std::invoke_result_t<Func, T*>>;
              
              if (!CanChain())
              {
@@ -169,14 +168,14 @@ namespace Chain
            * @return ReturnType The result of the function or the DefaultValue.
            */
           template<typename Func, typename ReturnType = std::invoke_result_t<Func, T*>>
-          ReturnType GetValue(const Func& Function, ReturnType DefaultValue = {}, const std::source_location& SourceLocation = std::source_location::current())
+          TOptional<ReturnType> GetValue(const Func& Function, ReturnType DefaultValue = {}, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
              {              
                 LogWarning(SourceLocation);
                 return MoveTemp(DefaultValue);
              }
-             return std::invoke(Function, Object.Get());
+             return TOptional<ReturnType>(std::invoke(Function, Object.Get()));
           }
 
           /**
@@ -286,7 +285,7 @@ namespace Chain
      */
    template<Private::IsUObject T, typename Func>
      auto Transform(T* Object, const Func& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
-     -> Private::TChain<std::remove_pointer_t<decltype(std::invoke(Function, std::declval<T*>()))>>
+     -> Private::TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
     {
        return StartChain(Object, bThrowWarning).Transform(Function, SourceLocation);
     }
