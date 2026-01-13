@@ -1,7 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "TimerHolderSubsystem.h"
+﻿#include "TimerHolderSubsystem.h"
 
 UTimerHolderSubsystem::ThisClass* UTimerHolderSubsystem::Get(const UObject* WorldContext)
 {
@@ -13,66 +10,95 @@ UTimerHolderSubsystem::ThisClass* UTimerHolderSubsystem::Get(const UObject* Worl
 	return nullptr;
 }
 
-FTimerHandle UTimerHolderSubsystem::StartTimer(const UObject* WorldContext, const FTimerDelegate& TimerDelegate, const float Rate, const bool bIsLooping, const float FirstDelay)
+FTimerHandle UTimerHolderSubsystem::ScheduleTimer(UObject* WorldContext, const FTimerDelegate& TimerDelegate,
+                                                  FTimerParameters TimerParameters, ETimerScope TimerScope)
 {
-	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
-	
-	FTimerHandle Handle;
-	auto TimerCallBack{ [TimerDelegate, TimerHolderSubsystem, Handle]()
+	if (Internal_CheckRate(TimerParameters.Rate))
 	{
-		TimerDelegate.ExecuteIfBound();
-		TimerHolderSubsystem->TimerHandles.Remove(Handle);
-	} };
-	TimerHolderSubsystem->GetTimerManager().SetTimer(Handle, TimerDelegate, Rate, bIsLooping, FirstDelay);
-	TimerHolderSubsystem->TimerHandles.Add(Handle);
-	return Handle;
+		return {};
+	}
+
+	//TODO : Put chain verification for null pointer.
+	
+	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
+
+	TSharedRef TimerHandle{ MakeShared<FTimerHandle>() };
+	return TimerHolderSubsystem->Internal_LaunchAndRegister(WorldContext, TimerParameters, TimerScope,
+	                                                        TimerHandle, TimerDelegate);
 }
 
-FTimerHandle UTimerHolderSubsystem::StartTimer(const UObject* WorldContext, const FTimerDynamicDelegate& TimerDelegate, const float Rate,
-	const bool bIsLooping, const float FirstDelay)
+FTimerHandle UTimerHolderSubsystem::ScheduleTimer(UObject* WorldContext, const FTimerDynamicDelegate& TimerDelegate,
+                                                  FTimerParameters TimerParameters, ETimerScope TimerScope)
 {
-	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
-	
-	FTimerHandle Handle;
-	auto TimerCallBack{ [TimerDelegate, TimerHolderSubsystem, Handle]()
+	if (Internal_CheckRate(TimerParameters.Rate))
 	{
-		TimerDelegate.ExecuteIfBound();
-		TimerHolderSubsystem->TimerHandles.Remove(Handle);
-	} };
-	TimerHolderSubsystem->GetTimerManager().SetTimer(Handle, TimerCallBack, Rate, bIsLooping, FirstDelay);
-	TimerHolderSubsystem->TimerHandles.Add(Handle);
-	return Handle;
+		return {};
+	}
+
+	//TODO : Put chain verification for null pointer.
+
+	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
+
+	TSharedRef TimerHandle{ MakeShared<FTimerHandle>() };
+	return TimerHolderSubsystem->Internal_LaunchAndRegister(WorldContext, TimerParameters, TimerScope,
+	                                                        TimerHandle, TimerDelegate);
 }
 
-FTimerHandle UTimerHolderSubsystem::StartTimer(const UObject* WorldContext, TFunction<void()>&& TimerDelegate,
-	const float Rate, const bool bIsLooping, const float FirstDelay)
+FTimerHandle UTimerHolderSubsystem::ScheduleTimer(UObject* WorldContext, TFunction<void()>&& TimerDelegate,
+                                                  FTimerParameters TimerParameters, ETimerScope TimerScope)
 {
-	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
-	
-	FTimerHandle Handle;
-	auto TimerCallBack{ [Delegate = MoveTemp(TimerDelegate), TimerHolderSubsystem, Handle]()
+	if (Internal_CheckRate(TimerParameters.Rate))
 	{
-		Delegate();
-		TimerHolderSubsystem->TimerHandles.Remove(Handle);
-	} };
-	TimerHolderSubsystem->GetTimerManager().SetTimer(Handle, MoveTemp(TimerCallBack), Rate, bIsLooping, FirstDelay);
-	TimerHolderSubsystem->TimerHandles.Add(Handle);
-	return Handle;
+		return {};
+	}
+
+	//TODO : Put chain verification for null pointer.
+
+	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
+
+	TSharedRef TimerHandle{ MakeShared<FTimerHandle>() };
+	return TimerHolderSubsystem->Internal_LaunchAndRegister(WorldContext, TimerParameters, TimerScope,
+	                                                        TimerHandle,
+	                                                        TimerDelegate);
 }
 
-void UTimerHolderSubsystem::EndTimer(const UObject* WorldContext, FTimerHandle& TimerHandle)
+void UTimerHolderSubsystem::CancelTimer(UObject* Object)
 {
-	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
+	//TODO : Put chain verification for null pointer.
 	
-	TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);
-	if (TimerHolderSubsystem->TimerHandles.Remove(TimerHandle))
+	ThisClass* TimerHolderSubsystem{ Get(Object) };
+
+	FActiveTimerRegistry TimerHandleSet;
+	if (TimerHolderSubsystem->OwnerBoundTimers.RemoveAndCopyValue(Object, TimerHandleSet))
 	{
+		for (auto& TimerHandle : TimerHandleSet)
+		{
+			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);
+		}
+	}
+}
+
+void UTimerHolderSubsystem::CancelTimer(const UObject* WorldContext, FTimerHandle& TimerHandle, ETimerScope TimerScope)
+{
+	//TODO : Put chain verification for null pointer.
+	
+	ThisClass* TimerHolderSubsystem{ Get(WorldContext) };
+
+	if (TimerScope == ETimerScope::Global)
+	{
+		if (TimerHolderSubsystem->UnboundActiveTimers.Remove(TimerHandle))
+		{
+			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);	
+		}
 		return;
 	}
 
-	if (TimerHandleSet* TimerHandleSet{ TimerHolderSubsystem->ObjectTimerHandle.Find(WorldContext) })
+	if (FActiveTimerRegistry* ActiveTimerRegistry{ TimerHolderSubsystem->OwnerBoundTimers.Find(WorldContext) })
 	{
-		TimerHandleSet->Remove(TimerHandle);
+		if (ActiveTimerRegistry->Remove(TimerHandle))
+		{
+			TimerHolderSubsystem->GetTimerManager().ClearTimer(TimerHandle);	
+		}
 	}
 }
 
@@ -80,12 +106,25 @@ void UTimerHolderSubsystem::Deinitialize()
 {
 	Super::Deinitialize();
 
-	for (auto& TimerHandle : TimerHandles)
+	for (FTimerHandle& TimerHandle : UnboundActiveTimers)
 	{
 		GetTimerManager().ClearTimer(TimerHandle);
 	}
 
-	TimerHandles.Empty();
+	for (auto& TimerHandleWithContext : OwnerBoundTimers)
+	{
+		for (auto& TimerHandle : TimerHandleWithContext.Value)
+		{
+			GetTimerManager().ClearTimer(TimerHandle);
+		}
+	}
+
+	UnboundActiveTimers.Empty();
+}
+
+bool UTimerHolderSubsystem::Internal_CheckRate(const float InRate)
+{
+	return FMath::IsNearlyZero(InRate) || InRate < 0.f;
 }
 
 FTimerManager& UTimerHolderSubsystem::GetTimerManager() const
