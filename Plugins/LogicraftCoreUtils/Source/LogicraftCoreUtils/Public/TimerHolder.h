@@ -64,7 +64,7 @@ public:
 		return TimerHandle;
 	}
 
-	void Pause() const;
+	void Pause();
 	void Clear();
 
 	bool IsPaused() const;

@@ -11,16 +11,20 @@ FTimerHolder::~FTimerHolder()
 	}
 }
 
-void FTimerHolder::Pause() const
+void FTimerHolder::Pause()
 {
-	check(TimerManager != nullptr);
-	TimerManager->PauseTimer(TimerHandle);
+	if (RetrieveTimerManager())
+	{
+		TimerManager->PauseTimer(TimerHandle);
+	}
 }
 
 void FTimerHolder::Clear()
 {
-	check(TimerManager != nullptr);
-	TimerManager->ClearTimer(TimerHandle);
+	if (RetrieveTimerManager())
+	{
+		TimerManager->ClearTimer(TimerHandle);
+	}
 }
 
 bool FTimerHolder::IsPaused() const
