@@ -25,6 +25,9 @@ namespace Chain
        template<typename T>
        concept IsUObject = std::is_base_of_v<UObject, CleanType<T>>;
 
+       template<typename Func, typename T>
+       concept IsCallable = std::invocable<Func, T>;
+         
        // Internal logging function to handle error reporting (implemented in cpp).
        void LOGICRAFTCOREUTILS_API ChainLog(const FString& Msg);
        
@@ -117,7 +120,7 @@ namespace Chain
            * @param SourceLocation Automatically captures the file and line number for logging.
            * @return TChain& Returns a reference to self to allow further method chaining.
            */
-          template<typename Func>
+          template<IsCallable<T*> Func>
           TChain Execute(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
@@ -140,7 +143,7 @@ namespace Chain
            * @param SourceLocation Automatically captures the file and line number.
            * @return TChain<NewType> A new chain wrapping the result of the function.
            */
-          template<typename Func>
+          template<IsCallable<T*> Func>
           auto Transform(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           -> TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
           {  
@@ -167,7 +170,7 @@ namespace Chain
            * @param SourceLocation Context for logging.
            * @return ReturnType The result of the function or the DefaultValue.
            */
-          template<typename Func, typename ReturnType = std::invoke_result_t<Func, T*>>
+          template<IsCallable<T*> Func, typename ReturnType = std::invoke_result_t<Func, T*>>
           TOptional<ReturnType> GetValue(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
@@ -222,7 +225,7 @@ namespace Chain
            *
            * @param Function A void callable taking no arguments.
            */
-          template<typename Func>
+          template<IsCallable<T*> Func>
           void Else(Func&& Function)
           {
              if (!CanChain())
@@ -267,7 +270,7 @@ namespace Chain
      * @param bThrowWarning Whether to log warnings if the object becomes invalid.
      * @param SourceLocation Automatically captures the file and line number.
      */
-    template<Private::IsUObject T, typename Func>
+    template<Private::IsUObject T, Private::IsCallable<T*> Func>
     void Execute(T* Object, Func&& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
     {
        StartChain(Object, bThrowWarning).Execute(Forward<Func>(Function), SourceLocation);
@@ -283,7 +286,7 @@ namespace Chain
      * @param SourceLocation Automatically captures the file and line number.
      * @return Private::TChain<NewType> A chain wrapping the result.
      */
-   template<Private::IsUObject T, typename Func>
+   template<Private::IsUObject T, Private::IsCallable<T*> Func>
      auto Transform(T* Object, Func&& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
      -> Private::TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
     {
