@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "TimerHolder.h"
 
@@ -65,7 +65,8 @@ bool FTimerHolder::RetrieveTimerManager()
 	{
 		return true;
 	}
-	
+
+	//Major crash on GEngine need to check ptr validity.
 	for (const FWorldContext& Context : GEngine->GetWorldContexts())
 	{
 		if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
