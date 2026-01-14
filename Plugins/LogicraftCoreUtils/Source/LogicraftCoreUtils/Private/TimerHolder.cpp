@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "TimerHolder.h"
 
@@ -10,7 +10,10 @@
 
 FTimerHolder::~FTimerHolder()
 {
-	Clear();
+	if (RetrieveTimerManager())
+	{
+		TimerManager->ClearTimer(TimerHandle);	
+	}
 }
 
 void FTimerHolder::Pause()
@@ -64,6 +67,11 @@ bool FTimerHolder::RetrieveTimerManager()
 	if (TimerManager)
 	{
 		return true;
+	}
+	
+	if (!GEngine)
+	{
+		return false;
 	}
 	
 	for (const FWorldContext& Context : GEngine->GetWorldContexts())

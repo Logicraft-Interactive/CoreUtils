@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #pragma once
 
@@ -30,7 +30,8 @@ struct LOGICRAFTCOREUTILS_API FTimerParameters
 };
 
 /**
- * 
+ * A wrapper that contains a timer handle.
+ * It uses the RAII pattern to automatically clear the scheduled timer upon destruction.
  */
 class LOGICRAFTCOREUTILS_API FTimerHolder
 {
