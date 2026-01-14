@@ -118,7 +118,7 @@ namespace Chain
            * @return TChain& Returns a reference to self to allow further method chaining.
            */
           template<typename Func>
-          TChain Execute(const Func& Function, const std::source_location& SourceLocation = std::source_location::current())
+          TChain Execute(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
              {
@@ -126,7 +126,7 @@ namespace Chain
                 return TChain(nullptr, bThrowWarning);
              }
         
-             std::invoke(Function, Object.Get());
+             std::invoke(Forward<Func>(Function), Object.Get());
              return *this;
           }
 
@@ -141,7 +141,7 @@ namespace Chain
            * @return TChain<NewType> A new chain wrapping the result of the function.
            */
           template<typename Func>
-          auto Transform(const Func& Function, const std::source_location& SourceLocation = std::source_location::current())
+          auto Transform(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           -> TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
           {  
              // Deduce the return type of the function to determine the new Chain type. 
@@ -153,7 +153,7 @@ namespace Chain
                 return TChain<NewType>(nullptr, bThrowWarning);
              }
         
-             auto NewObject = std::invoke(Function, Object.Get());
+             auto NewObject = std::invoke(Forward<Func>(Function), Object.Get());
              return TChain<NewType>(NewObject, bThrowWarning);
           }
 
@@ -168,14 +168,14 @@ namespace Chain
            * @return ReturnType The result of the function or the DefaultValue.
            */
           template<typename Func, typename ReturnType = std::invoke_result_t<Func, T*>>
-          TOptional<ReturnType> GetValue(const Func& Function, ReturnType DefaultValue = {}, const std::source_location& SourceLocation = std::source_location::current())
+          TOptional<ReturnType> GetValue(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
              {              
                 LogWarning(SourceLocation);
-                return MoveTemp(DefaultValue);
+                return NullOpt;
              }
-             return TOptional<ReturnType>(std::invoke(Function, Object.Get()));
+             return TOptional<ReturnType>(std::invoke(Forward<Func>(Function), Object.Get()));
           }
 
           /**
@@ -223,11 +223,11 @@ namespace Chain
            * @param Function A void callable taking no arguments.
            */
           template<typename Func>
-          void Else(const Func& Function)
+          void Else(Func&& Function)
           {
              if (!CanChain())
              {
-                std::invoke(Function);
+                std::invoke(Forward<Func>(Function));
              }
           }
        };
@@ -268,9 +268,9 @@ namespace Chain
      * @param SourceLocation Automatically captures the file and line number.
      */
     template<Private::IsUObject T, typename Func>
-    void Execute(T* Object, const Func& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
+    void Execute(T* Object, Func&& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
     {
-       StartChain(Object, bThrowWarning).Execute(Function, SourceLocation);
+       StartChain(Object, bThrowWarning).Execute(Forward<Func>(Function), SourceLocation);
     }
 
     /**
@@ -284,9 +284,9 @@ namespace Chain
      * @return Private::TChain<NewType> A chain wrapping the result.
      */
    template<Private::IsUObject T, typename Func>
-     auto Transform(T* Object, const Func& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
+     auto Transform(T* Object, Func&& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
      -> Private::TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
     {
-       return StartChain(Object, bThrowWarning).Transform(Function, SourceLocation);
+       return StartChain(Object, bThrowWarning).Transform(Forward<Func>(Function), SourceLocation);
     }
 }
