@@ -10,7 +10,10 @@
 
 FTimerHolder::~FTimerHolder()
 {
-	Clear();
+	if (RetrieveTimerManager())
+	{
+		TimerManager->ClearTimer(TimerHandle);	
+	}
 }
 
 void FTimerHolder::Pause()
@@ -65,8 +68,12 @@ bool FTimerHolder::RetrieveTimerManager()
 	{
 		return true;
 	}
-
-	//Major crash on GEngine need to check ptr validity.
+	
+	if (!GEngine)
+	{
+		return false;
+	}
+	
 	for (const FWorldContext& Context : GEngine->GetWorldContexts())
 	{
 		if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
