@@ -119,7 +119,7 @@ namespace Linq
 		template <typename T>
 		class TRValueSourceIterator : public ILinqIterator<T>
 		{
-			TArray<T> Collection = nullptr;
+			TArray<T> Collection{};
 			int Current = -1;
 
 		public:
