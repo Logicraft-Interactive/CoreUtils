@@ -273,8 +273,8 @@ namespace Linq
 		public:
 			template <typename F = Func>
 			requires std::is_same_v<F, Func>
-			TExecuteIterator(TUniquePtr<ILinqIterator<T>>&& InSource, F&& InPredicate)
-				: Source(MoveTemp(InSource)), Modifier(Forward<Func>(InPredicate))
+			TExecuteIterator(TUniquePtr<ILinqIterator<T>>&& InSource, F&& InAction)
+				: Source(MoveTemp(InSource)), Modifier(Forward<Func>(InAction))
 			{
 			}
 
