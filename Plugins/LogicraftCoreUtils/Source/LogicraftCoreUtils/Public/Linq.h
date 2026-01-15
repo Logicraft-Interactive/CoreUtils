@@ -34,15 +34,19 @@ namespace Linq
 		struct TStorageTraits
 		{ 
 			// If T is a reference, store it as a pointer. Otherwise, store the value directly.
-			using StorageType = std::conditional_t<std::is_reference_v<T>, std::remove_reference_t<T>*, T>;
+			static constexpr bool bIsReference = std::is_reference_v<T>;
+			using CleanType = std::remove_cvref_t<T>;
+			using StorageType = std::conditional_t<bIsReference,const CleanType*, T>;
 		private:
 			StorageType Value;
 		public:
 
 			// Sets the stored value handling l-values and r-values appropriately.
-			void Set(T&& InValue)
+			template<typename Ty = T>
+			requires std::is_same_v<std::remove_cvref_t<Ty>, std::remove_cvref_t<T>>
+			void Set(Ty&& InValue)
 			{
-				if constexpr (std::is_reference_v<T>)
+				if constexpr (bIsReference)
 				{
 					Value = &InValue; 
 				}
@@ -53,9 +57,9 @@ namespace Linq
 			}
 
 			// Retrieves the value, dereferencing the pointer if strictly necessary for the storage type.
-			const T& Get()
+			const CleanType& Get()
 			{
-				if constexpr (std::is_reference_v<T>)
+				if constexpr (bIsReference)
 				{
 					return *Value; 
 				}
@@ -65,7 +69,63 @@ namespace Linq
 				}
 			}
 		};
-		
+
+		template<typename ArrayType, typename ValueType = typename std::remove_cvref_t<ArrayType>::ElementType>
+		class ILinqCollection
+		{
+			using CleanArrayType = std::remove_cvref_t<ArrayType>;
+		public:
+			virtual ~ILinqCollection() = default;
+			
+			virtual void Reset() = 0;
+
+			virtual bool Next() = 0;
+
+			virtual const ValueType& GetCurrent() = 0;
+
+			virtual const CleanArrayType& GetArray() = 0;
+ 		};
+ 
+		template<typename ArrayType, typename TrueType, typename ValueType = typename std::remove_cvref_t<ArrayType>::ElementType>
+		requires std::is_same_v<ArrayType, TArray<ValueType>>
+		class TLinqTArray : public ILinqCollection<ArrayType>
+		{			
+			TStorageTraits<TrueType> Collection = {};
+			int CurrentIndex = -1;
+
+		public:
+			explicit TLinqTArray(const ArrayType& InCollection)
+			{
+				Collection.Set(InCollection);
+			}
+
+			explicit TLinqTArray(ArrayType&& InCollection)
+			{
+				Collection.Set(MoveTemp(InCollection)); 
+			}
+			
+			virtual void Reset() override
+			{
+				CurrentIndex = -1;
+			}
+
+			virtual bool Next() override
+			{
+				return ++CurrentIndex < Collection.Get().Num();
+			}
+
+			virtual const ValueType& GetCurrent() override
+			{
+				return Collection.Get()[CurrentIndex];
+			}
+
+			virtual const ArrayType& GetArray() override
+			{
+				return Collection.Get();
+			}
+		};
+
+
 		// Base interface for all LINQ iterators.
 		// Follows a pull-based iterator pattern (Next -> GetCurrent).
 		template <typename T>
@@ -84,6 +144,35 @@ namespace Linq
 			virtual const T& GetCurrent() = 0;
 		};
 
+		
+		template <typename T, typename ArrayType>
+		class TSourceIterator : public ILinqIterator<T>
+		{
+			TUniquePtr<ILinqCollection<ArrayType>> Collection;
+
+		public:
+			explicit TSourceIterator(TUniquePtr<ILinqCollection<ArrayType>>&& InSource)
+				: Collection(MoveTemp(InSource))
+			{
+			}
+
+
+			virtual bool Next() override
+			{
+				return Collection->Next();
+			}
+
+			virtual void Reset() override
+			{
+				Collection->Reset();
+			}
+
+			virtual const T& GetCurrent() override
+			{
+				return Collection->GetCurrent();
+			}
+		};
+		
 		// Iterator for iterating over an existing TArray pointer (L-Value source).
 		// Does not own the memory of the array.
 		template <typename T>
@@ -1005,6 +1094,14 @@ namespace Linq
 	}
 
 	// --- Entry Points ---
+
+	template<typename ArrayType, typename ValueType = std::remove_cvref_t<ArrayType>::ElementType>
+	requires std::is_same_v<std::remove_cvref_t<ArrayType>, TArray<ValueType>>
+	Private::TLinqQuery<ValueType> StartCustom(ArrayType&& Source)
+	{
+		return Private::TLinqQuery<ValueType>(MakeUnique<Private::TSourceIterator<ValueType, std::remove_cvref_t<ArrayType>>>(
+			MakeUnique<Private::TLinqTArray<std::remove_cvref_t<ArrayType>, decltype(Source)>>(Forward<ArrayType>(Source))));
+	}
 
 	// Starts a Linq query from an existing TArray variable (L-Value).
 	template <typename T>

@@ -17,15 +17,16 @@ bool FLinqIntegerTest::RunTest(const FString& Parameters)
 	TArray<int32> Numbers = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
 	// Test: Where (Filter even numbers)
-	TArray<int32> EvenNumbers = Linq::Start(Numbers)
+	TArray<int32> EvenNumbers = Linq::StartCustom(Numbers)
 		.Where([](int32 N) { return N % 2 == 0; })
 		.ToArray();
-
+ 
+	
 	TestEqual("Where should filter even numbers", EvenNumbers.Num(), 5);
 	TestEqual("First even number should be 2", EvenNumbers[0], 2);
 
 	// Test: Select (Square numbers)
-	TArray<int32> Squared = Linq::Start(Numbers)
+	TArray<int32> Squared = Linq::StartCustom(Numbers)
 		.Take(3)
 		.Select([](int32 N) { return N * N; })
 		.ToArray();
@@ -35,22 +36,22 @@ bool FLinqIntegerTest::RunTest(const FString& Parameters)
 	TestEqual("Third square should be 9", Squared[2], 9);
 
 	// Test: Sum
-	int32 SumOfFirstFive = Linq::Start(Numbers)
+	int32 SumOfFirstFive = Linq::StartCustom(Numbers)
 		.Take(5)
 		.Sum();
 	
 	TestEqual("Sum of 1 to 5 should be 15", SumOfFirstFive, 15);
 
 	// Test: Count
-	int32 Count = Linq::Start(Numbers)
+	int32 Count = Linq::StartCustom(Numbers)
 	.Take(4)
 	.Count([](int32 N){return N % 2 == 0;});
 
 	TestEqual("Count of even number from 1 to 4 should return 2", Count, 2);
 	
 	// Test: Any / All
-	bool bHasNegative = Linq::Start(Numbers).Any([](int32 N) { return N < 0; });
-	bool bAllPositive = Linq::Start(Numbers).All([](int32 N) { return N > 0; });
+	bool bHasNegative = Linq::StartCustom(Numbers).Any([](int32 N) { return N < 0; });
+	bool bAllPositive = Linq::StartCustom(Numbers).All([](int32 N) { return N > 0; });
 
 	TestFalse("Collection should not have negative numbers", bHasNegative);
 	TestTrue("Collection should have all positive numbers", bAllPositive);
@@ -66,7 +67,7 @@ bool FLinqSortingTest::RunTest(const FString& Parameters)
 	TArray<int32> Unsorted = { 5, 1, 9, 3 };
 
 	// Test: OrderBy (Ascending)
-	TArray<int32> Sorted = Linq::Start(Unsorted)
+	TArray<int32> Sorted = Linq::StartCustom(Unsorted)
 		.OrderBy()
 		.ToArray();
 
@@ -74,17 +75,17 @@ bool FLinqSortingTest::RunTest(const FString& Parameters)
 	TestEqual("Last item should be 9", Sorted.Last(), 9);
 
 	// Test: OrderBy (Descending via Comparator)
-	TArray<int32> Descending = Linq::Start(Unsorted)
+	TArray<int32> Descending = Linq::StartCustom(Unsorted)
 		.OrderBy([](int32 A, int32 B) { return A > B; }) // Inverse comparator
 		.ToArray();
 
 	TestEqual("First item should be 9", Descending[0], 9);
 	
 	// Test: First / FirstOrDefault
-	int32 FirstMatch = Linq::Start(Unsorted).First([](int32 N) { return N > 4; });
+	int32 FirstMatch = Linq::StartCustom(Unsorted).First([](int32 N) { return N > 4; });
 	TestEqual("First number > 4 should be 5", FirstMatch, 5);
 
-	int32 Missing = Linq::Start(Unsorted).FirstOrDefault([](int32 N) { return N > 100; }, -1);
+	int32 Missing = Linq::StartCustom(Unsorted).FirstOrDefault([](int32 N) { return N > 100; }, -1);
 	TestEqual("Should return default value -1 when not found", Missing, -1);
 
 	return true;
@@ -113,7 +114,7 @@ bool FLinqUObjectTest::RunTest(const FString& Parameters)
 
 	// Test: IsValid
 	// The library's IsValidIterator checks Unreal's IsValid() function
-	TArray<UObject*> ValidOnly = Linq::Start(ObjectList)
+	TArray<UObject*> ValidOnly = Linq::StartCustom(ObjectList)
 		.IsValid()
 		.ToArray();
 
@@ -122,7 +123,7 @@ bool FLinqUObjectTest::RunTest(const FString& Parameters)
 	// Test: Apply (Side Effects)
 	// We will use a counter to verify Apply was called on valid objects
 	int32 CallCount = 0;
-	Linq::Start(ValidOnly)
+	Linq::StartCustom(ValidOnly)
 		.Execute([&](UObject* Obj) {
 			CallCount++;
 		})
@@ -136,7 +137,7 @@ bool FLinqUObjectTest::RunTest(const FString& Parameters)
 	// Let's verify TCastIterator implementation: it does "if (CurrentValue = Cast...)"
 	// so it filters out failed casts automatically.
 	
-	TArray<UObject*> CastResult = Linq::Start(ObjectList)
+	TArray<UObject*> CastResult = Linq::StartCustom(ObjectList)
 		.IsValid()
 		.Cast<UObject>() // Trivial cast
 		.ToArray();
