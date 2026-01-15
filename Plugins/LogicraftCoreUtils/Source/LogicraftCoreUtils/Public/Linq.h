@@ -19,13 +19,6 @@ namespace Linq
 			// Checks if a type inherits from UObject (Unreal Engine Object).
 			template <typename Ty>
 			concept DerivedFromObject = std::derived_from<Ty, UObject>;
-
-			// Helper to deduce the value type contained within a TArray-like structure.
-			template <TIsArray T>
-			struct GetArrayValueType
-			{
-				using Type = std::remove_cvref_t<decltype(*std::declval<T>().begin())>;
-			};
 		}
 
 		// Traits helper to determine how to store a value (as a pointer/reference or a direct value).
