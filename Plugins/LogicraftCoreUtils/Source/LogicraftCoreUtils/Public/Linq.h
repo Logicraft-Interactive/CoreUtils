@@ -535,7 +535,6 @@ namespace Linq
 
 		// Sorting by a specific property selector.
 		template<typename T, typename Sel>
-		requires std::is_convertible_v<std::invoke_result_t<Sel, T>,bool>
 		class TSelectorOrderByIterator : public TOrderByBaseIterator<T>
 		{
 			Sel Selector;
