@@ -3,6 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TimerManager.h"
+#include "Engine/EngineTypes.h"
+#include "Engine/TimerHandle.h"
+#include "GameFramework/Actor.h"
 
 namespace Concepts
 {
@@ -31,7 +35,7 @@ struct LOGICRAFTCOREUTILS_API FTimerParameters
 
 /**
  * A wrapper that contains a timer handle.
- * It uses the RAII pattern to automatically clear the scheduled timer upon destruction.
+ * It uses the RAII idiom to automatically clear the scheduled timer upon destruction.
  */
 class LOGICRAFTCOREUTILS_API FTimerHolder
 {

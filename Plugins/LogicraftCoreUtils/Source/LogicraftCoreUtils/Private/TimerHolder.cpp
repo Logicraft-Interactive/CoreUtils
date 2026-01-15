@@ -1,6 +1,8 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "TimerHolder.h"
+#include "Engine/Engine.h"
+#include "Engine/World.h"
 
 #define TIMER_HOLDER_CHECK() \
 		checkf(TimerManager != nullptr, TEXT("The timer manager was not retrieved prior to using this function."))

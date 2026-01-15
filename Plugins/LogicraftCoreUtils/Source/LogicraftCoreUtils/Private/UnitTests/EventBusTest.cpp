@@ -1,10 +1,12 @@
 ﻿#include "CoreMinimal.h"
-#include "Misc/AutomationTest.h"
+
+#if WITH_EDITOR
+
 #include "EventBusSubsystem.h"
 #include "GameplayTagContainer.h"
-#include "Engine/World.h"
-#include "Tests/AutomationEditorCommon.h"
 #include "NativeGameplayTags.h"
+#include "Engine/World.h"
+#include "Misc/AutomationTest.h"
 
 BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.Core.EventBus", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
     UEventBusSubsystem* EventBus = nullptr;
@@ -142,3 +144,5 @@ void FEventBusSpec::Define()
     //      });
     // });
 }
+
+#endif

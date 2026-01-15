@@ -2,6 +2,8 @@
 
 
 #include "EventBusSubsystem.h"
+#include "Engine/Engine.h"
+#include "Engine/World.h"
 
 UEventBusSubsystem::ThisClass* UEventBusSubsystem::Get(const UObject* WorldContext)
 {
