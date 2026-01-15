@@ -17,15 +17,12 @@ ATestEventBus::ATestEventBus()
 void ATestEventBus::BeginPlay()
 {
 	Super::BeginPlay();
-
-	auto a = [](){};
-	TypeTraits::bIsInvocableNoArgs<a>
 	
+	//UEventBusSubsystem::Get(this)->AddUObject(FGameplayTag::EmptyTag, this, &ATestEventBus::EventVoid);
 	UEventBusSubsystem::Get(this)->AddUObject(FGameplayTag::EmptyTag, this, &ATestEventBus::Event);
-	UEventBusSubsystem::Get(this)->AddUObject(FGameplayTag::EmptyTag, this, &ATestEventBus::EventVoid);
-	UEventBusSubsystem::Get(this)->AddLambda(FGameplayTag::EmptyTag, []()
+	UEventBusSubsystem::Get(this)->AddLambda(FGameplayTag::EmptyTag, [](int a)
 	{
-		
+		UE_LOG(LogTemp, Warning, TEXT("Lambda"))
 	});
 }
 

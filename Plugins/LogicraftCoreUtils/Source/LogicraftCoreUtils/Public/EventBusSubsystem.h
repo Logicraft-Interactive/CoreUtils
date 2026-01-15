@@ -11,7 +11,7 @@ DECLARE_MULTICAST_DELEGATE(TestDelegate)
 
 namespace TypeTraits
 {
-	template<typename Type>
+	template<typename>
 	struct TIsMulticastDelegate : std::false_type {};
 
 	template<typename TReturn, typename ...TArgs>
@@ -80,38 +80,36 @@ namespace TypeTraits
 		using FFunctionType = TReturn (*)(TArgs...);
 	};
 
-	// template<typename TFunction, typename ...TArgs>
-	// struct TIsInvocableNoArgs
-	// {
-	// 	static constexpr bool bValue{ false };
-	// };
-	//
-	// template<typename TReturn, typename ...TArgs>
-	// struct TIsInvocableNoArgs<TReturn (*)(TArgs...), TArgs...>
-	// {
-	// 	using FFunctionType = TReturn (*)(TArgs...);
-	// 	
-	// 	static constexpr bool bValue{ std::is_invocable_v<FFunctionType, TArgs...> };
-	// };
-	//
-	// template<typename TReturn, typename TClass, typename ...TArgs>
-	// struct TIsInvocableNoArgs<TReturn (TClass::*)(TArgs...), TClass, TArgs...>
-	// {
-	// 	using FFunctionType = TReturn (TClass::*)(TArgs...);
-	// 	
-	// 	static constexpr bool bValue{ std::is_invocable_v<FFunctionType, TClass, TArgs...> };
-	// };
-	//
-	// template<typename TReturn, typename TClass, typename ...TArgs>
-	// struct TIsInvocableNoArgs<TReturn (TClass::*)(TArgs...) const, TClass, TArgs...>
-	// {
-	// 	using FFunctionType = TReturn (TClass::*)(TArgs...) const;
-	// 	
-	// 	static constexpr bool bValue{ std::is_invocable_v<FFunctionType, TClass, TArgs...> };
-	// };
-	//
-	// template<typename TFunction, typename ...TArgs>
-	// constexpr static bool bIsInvocableNoArgs{ TIsInvocableNoArgs<TFunction, TArgs...>::bValue };
+	template<typename, typename...>
+	struct TIsInvocableWithTupleArgs
+	{
+		using FFunctionType = void;
+		constexpr static bool bValue = false;
+	};
+
+	template<typename TReturn, typename ...TArgs>
+	struct TIsInvocableWithTupleArgs<TReturn (*)(TArgs...), TTuple<TArgs...>>
+	{
+		using FFunctionType = TReturn (*)(TArgs...);
+		constexpr static bool bValue = std::is_invocable_v<FFunctionType, TArgs...>;
+	};
+
+	template<typename TReturn, typename TClass, typename ...TArgs>
+	struct TIsInvocableWithTupleArgs<TReturn (TClass::*)(TArgs...), TClass, TTuple<TArgs...>>
+	{
+		using FFunctionType = TReturn (TClass::*)(TArgs...);
+		constexpr static bool bValue = std::is_invocable_v<FFunctionType, TClass, TArgs...>;
+	};
+
+	template<typename TReturn, typename TClass, typename ...TArgs>
+	struct TIsInvocableWithTupleArgs<TReturn (TClass::*)(TArgs...) const, TClass, TTuple<TArgs...>>
+	{
+		using FFunctionType = TReturn (TClass::*)(TArgs...) const;
+		constexpr static bool bValue = std::is_invocable_v<FFunctionType, TClass, TArgs...>;
+	};
+
+	template<typename Type, typename ...TArgs>
+	constexpr static bool TIsInvocableWithTupleArgs_V = TIsInvocableWithTupleArgs<Type, TArgs...>::bValue;
 } // TypeTraits
 
 namespace Concepts
@@ -119,8 +117,8 @@ namespace Concepts
 	template<typename Type>
 	concept IsMulticastDelegate = TypeTraits::bIsMulticastDelegate_V<Type>;
 
-	// template<typename TFunction, typename ...TArgs>
-	// concept InvocableNoArgs = TypeTraits::bIsInvocableNoArgs<TFunction, TArgs...>;
+	template<typename Type, typename ...TArgs>
+	concept IsInvocableWithTupleArgs = TypeTraits::TIsInvocableWithTupleArgs_V<Type, TArgs...>;
 } // Concepts
 
 struct IEventContainerBase
@@ -144,23 +142,32 @@ public:
 	static const void* StaticGetTypeID() { return &TypeId; }
 };
 
-template<typename Type>
-struct FContainerTypeFor;
-
-template<typename ...TArgs>
-struct FContainerTypeFor<TTuple<TArgs...>>
+namespace TypeTraits
 {
-	using FType = TEventContainer<TArgs...>;
-};
+	template<typename>
+	struct FContainerTypeFor;
 
-template<typename ...TArgs>
-struct FContainerTypeFor<TMulticastDelegate<void(TArgs...)>>
-{
-	using FType = TEventContainer<TArgs...>;
-};
+	template<typename ...TArgs>
+	struct FContainerTypeFor<TArgs...>
+	{
+		using FType = TEventContainer<TArgs...>;
+	};
 
-template<typename Ty>
-using TContainerTypeFor = FContainerTypeFor<Ty>::FType;
+	template<typename ...TArgs>
+	struct FContainerTypeFor<TTuple<TArgs...>>
+	{
+		using FType = TEventContainer<TArgs...>;
+	};
+
+	template<typename ...TArgs>
+	struct FContainerTypeFor<TMulticastDelegate<void(TArgs...)>>
+	{
+		using FType = TEventContainer<TArgs...>;
+	};
+
+	template<typename Ty>
+	using TContainerTypeFor = FContainerTypeFor<Ty>::FType;
+}
 
 /**
  * 
@@ -175,152 +182,185 @@ class LOGICRAFTCOREUTILS_API UEventBusSubsystem : public UWorldSubsystem
 public:
 	static ThisClass* Get(const UObject* WorldContext);
 	
-	template<typename TUserObject, typename TMemberFunction, typename ...TArgs>
-		requires
-			(std::invocable<TMemberFunction, TUserObject> || std::same_as<TMemberFunction, FName>) &&
-				std::is_base_of_v<UObject, TUserObject>
-	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TUserObject* UserObject, TMemberFunction&& Function)
+	template<typename TUserObject, typename TMemberFunction>
+		requires std::is_base_of_v<UObject, TUserObject> &&
+			Concepts::IsInvocableWithTupleArgs<TMemberFunction, TUserObject, typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>
+	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TUserObject* UserObject, TMemberFunction Function)
 	{
-		return Internal_Add<TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-		[UserObject, InFunction = Forward<TMemberFunction>(Function)](auto& EventContainer)
+		return Internal_Add<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+		[UserObject, Function](auto& EventContainer)
 		{
-			if (std::same_as<TMemberFunction, FName>)
-			{
-				return EventContainer.MulticastDelegate.AddUFunction(UserObject, Forward<TMemberFunction>(InFunction));
-			}
-			else
-			{
-				return EventContainer.MulticastDelegate.AddUObject(UserObject, Forward<TMemberFunction>(InFunction));
-			}
+			return EventContainer.MulticastDelegate.AddUObject(UserObject, Function);
 		});
 	}
 
 	template<typename TUserObject, typename TMemberFunction>
-	requires
-		(std::invocable<TMemberFunction, TUserObject> || std::same_as<TMemberFunction, FName>) &&
-			std::is_base_of_v<UObject, TUserObject>
-	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, TMemberFunction&& Function)
+	requires std::is_base_of_v<UObject, TUserObject> &&
+			Concepts::IsInvocableWithTupleArgs<TMemberFunction, TUserObject, typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>
+	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, TMemberFunction Function)
 	{
-		return AddUObject(GameplayTag, UserObject.Get(), Forward<TMemberFunction>(Function));
+		return AddUObject(GameplayTag, UserObject.Get(), Function);
 	}
 
+	template<typename TUserObject, typename ...TFunctionArgs>
+		requires std::is_base_of_v<UObject, TUserObject>
+	FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TUserObject* UserObject, const FName& FunctionName)
+	{
+		return Internal_Add<TFunctionArgs>(GameplayTag,
+		[UserObject](auto& EventContainer, const FName& InFunctionName)
+		{
+			return EventContainer.MulticastDelegate.AddUFunction(UserObject, InFunctionName);
+		}, FunctionName);
+	}
+
+	template<typename TUserObject, typename ...TFunctionArgs>
+		requires std::is_base_of_v<UObject, TUserObject>
+	FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, const FName& FunctionName)
+	{
+		return AddUFunction<TUserObject, TFunctionArgs...>(GameplayTag, UserObject.Get(), FunctionName);
+	}
+	
 	template<Concepts::IsMulticastDelegate TDelegate>
 	FDelegateHandle Add(const FGameplayTag& GameplayTag, TDelegate&& Delegate)
 	{
 		return Internal_Add<TDelegate>(GameplayTag,
-		[InDelegate = Forward<TDelegate>(Delegate)](auto& EventContainer)
+		[]<typename TInDelegate>(auto& EventContainer, TInDelegate&& InDelegate)
 		{
-			EventContainer->MulticastDelegate.Add(Forward<TDelegate>(InDelegate));
-		});
+			EventContainer.MulticastDelegate.Add(Forward<TInDelegate>(InDelegate));
+		}, Forward<TDelegate>(Delegate));
 	}
 
-	template<typename TUserObject, std::invocable TFunctor>
-		requires std::is_base_of_v<UObject, TUserObject>
+	template<typename TUserObject, typename TFunctor>
+		requires std::is_base_of_v<UObject, TUserObject> &&
+			Concepts::IsInvocableWithTupleArgs<decltype(&TFunctor::operator()), TFunctor, typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>
 	FDelegateHandle AddWeakLambda(const FGameplayTag& GameplayTag, TUserObject* UserObject, TFunctor&& Functor)
 	{
 		return Internal_Add<TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[UserObject, InFunctor = Forward<TFunctor>(Functor)](auto& EventContainer)
+		[UserObject]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
 		{
-			return EventContainer->MulticastDelegate.AddWeakLambda(UserObject, Forward<TFunctor>(InFunctor));
-		});
+			return EventContainer.MulticastDelegate.AddWeakLambda(UserObject, Forward<TInFunctor>(InFunctor));
+		}, Forward<TFunctor>(Functor));
 	}
 
-	template<std::invocable TFunctor>
+	template<typename TFunctor>
+		requires Concepts::IsInvocableWithTupleArgs<decltype(&TFunctor::operator()), TFunctor, typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>
 	FDelegateHandle AddLambda(const FGameplayTag& GameplayTag, TFunctor&& Functor)
 	{
-		return Internal_Add<TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[InFunctor = Forward<TFunctor>(Functor)](auto& EventContainer)
+		return Internal_Add<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+		[]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
 		{
-			return EventContainer->MulticastDelegate.AddLambda(Forward<TFunctor>(InFunctor));
-		});
+			return EventContainer.MulticastDelegate.AddLambda(Forward<TInFunctor>(InFunctor));
+		}, Forward<TFunctor>(Functor));
 	}
 
 	template<typename TUserClass, typename TMemberFunction>
-		requires std::invocable<TMemberFunction, TUserClass> && !std::is_base_of_v<UObject, TUserClass>
-	FDelegateHandle AddRaw(const FGameplayTag& GameplayTag, TUserClass* UserRawObject, TMemberFunction&& Function)
+		requires !std::is_base_of_v<UObject, TUserClass> &&
+			Concepts::IsInvocableWithTupleArgs<TMemberFunction, TUserClass, typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>
+	FDelegateHandle AddRaw(const FGameplayTag& GameplayTag, TUserClass* UserRawObject, TMemberFunction Function)
 	{
 		return Internal_Add<TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-		[UserRawObject, InFunction = Forward<TMemberFunction>(Function)](auto& EventContainer)
+		[UserRawObject, Function](auto& EventContainer)
 		{
-			return EventContainer->MulticastDelegate.AddRaw(UserRawObject, Forward<TMemberFunction>(InFunction));
+			return EventContainer.MulticastDelegate.AddRaw(UserRawObject, Function);
 		});
 	}
 
 	template<typename TSharedRefType, ESPMode Mode, typename TMemberFunction>
-		requires std::invocable<TMemberFunction, TSharedRefType>
-	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& SharedRef, TMemberFunction&& Function)
+		requires Concepts::IsInvocableWithTupleArgs<TMemberFunction, TSharedRefType, typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>
+	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& SharedRef, TMemberFunction Function)
 	{
 		return Internal_Add<TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-		[&SharedRef, InFunction = Forward<TMemberFunction>(Function)](auto& EventContainer)
+		[&SharedRef, Function](auto& EventContainer)
 		{
 			if constexpr (Mode == ESPMode::ThreadSafe)
 			{
-				return EventContainer.MulticastDelegate.AddThreadSafeSP(SharedRef, Forward<TMemberFunction>(InFunction));
+				return EventContainer.MulticastDelegate.AddThreadSafeSP(SharedRef, Function);
 			}
 			else
 			{
-				return EventContainer.MulticastDelegate.AddSP(SharedRef, Forward<TMemberFunction>(InFunction));
+				return EventContainer.MulticastDelegate.AddSP(SharedRef, Function);
 			}
 		});
 	}
 
 	template<typename TSharedType, ESPMode Mode, typename TMemberFunction>
-		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType> && std::invocable<TMemberFunction, TSharedType>
-	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, TSharedType* UserClass, TMemberFunction&& Function)
+		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType> &&
+			Concepts::IsInvocableWithTupleArgs<TMemberFunction, TSharedType, typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>
+	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, TSharedType* UserClass, TMemberFunction Function)
 	{
-		return AddSP(GameplayTag, StaticCastSharedRef<TSharedType, Mode>(UserClass->AsShared()), Forward<TMemberFunction>(Function));
+		return AddSP(GameplayTag, StaticCastSharedRef<TSharedType, Mode>(UserClass->AsShared()), Function);
 	}
 
 	template<typename TSharedRefType, ESPMode Mode, typename TFunctor>
-		requires std::invocable<TFunctor>
+		requires Concepts::IsInvocableWithTupleArgs<decltype(&TFunctor::operator()), TFunctor, typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>
 	FDelegateHandle AddSPLambda(const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& SharedRef, TFunctor&& Functor)
 	{
 		return Internal_Add<TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[&SharedRef, InFunctor = Forward<TFunctor>(Functor)](auto& EventContainer)
+		[&SharedRef]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
 		{
-			return EventContainer->MulticastDelegate.AddSPLambda(SharedRef, Forward<TFunctor>(InFunctor));
-		});
+			return EventContainer.MulticastDelegate.AddSPLambda(SharedRef, Forward<TInFunctor>(InFunctor));
+		}, Forward<TFunctor>(Functor));
 	}
 
 	template<typename TSharedType, ESPMode Mode, typename TFunctor>
-		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType> && std::invocable<TFunctor>
+		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType> &&
+			Concepts::IsInvocableWithTupleArgs<decltype(&TFunctor::operator()), TFunctor, typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>
 	FDelegateHandle AddSPLambda(const FGameplayTag& GameplayTag, TSharedType* SharedRef, TFunctor&& Functor)
 	{
 		return Internal_Add<TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[&SharedRef, InFunctor = Forward<TFunctor>(Functor)](auto& EventContainer)
+		[&SharedRef]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
 		{
-			return EventContainer->MulticastDelegate.AddSPLambda(SharedRef, Forward<TFunctor>(InFunctor));
-		});
+			return EventContainer.MulticastDelegate.AddSPLambda(SharedRef, Forward<TInFunctor>(InFunctor));
+		}, Forward<TFunctor>(Functor));
 	}
 
-	template<std::invocable TFunction>
-	FDelegateHandle AddStatic(const FGameplayTag& GameplayTag, TFunction&& Function)
+	template<typename TFunction>
+		requires Concepts::IsInvocableWithTupleArgs<TFunction, typename TypeTraits::TFunctionTraits<TFunction>::FArgsType>
+	FDelegateHandle AddStatic(const FGameplayTag& GameplayTag, TFunction Function)
 	{
 		return Internal_Add<TypeTraits::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
-		[InFunction = Forward<TFunction>(Function)](auto& EventContainer)
+		[Function](auto& EventContainer)
 		{
-			return EventContainer->MulticastDelegate.AddStatic(Forward<TFunction>(InFunction));
+			return EventContainer.MulticastDelegate.AddStatic(Function);
 		});
 	}
-	
-private:
-	template<typename TContainerArgs>
-	FDelegateHandle Internal_Add(const FGameplayTag& GameplayTag, std::invocable auto&& Callable)
-	{
-		using FEventContainerType = TContainerTypeFor<TContainerArgs>;
 
+	template<typename ...TArgs>
+	void Broadcast(const FGameplayTag& GameplayTag, TArgs&&... Args)
+	{
+		using FEventContainerType = TypeTraits::TContainerTypeFor<TArgs>;
+		
 		if (TSharedRef<IEventContainerBase>* BaseEventContainerPtr{ ActiveEvents.Find(GameplayTag) })
 		{
 			auto& BaseEventContainerRef{ *BaseEventContainerPtr };
-			if (ensureMsgf(BaseEventContainerRef->GetTypeID() == FEventContainerType::StaticGetTypeID, TEXT("Unable to add a callback of a different type.")))
+			if (ensureMsgf(BaseEventContainerRef->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to broadcast a callback of a different type.")))
 			{
 				auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainerRef);
-				return Callable(*EventContainer);
+				EventContainer->MulticastDelegate.Broadcast(Forward<TArgs>(Args)...);
+			}
+		}
+	}
+	
+private:
+	template<typename TContainerArgs, typename TCallable, typename ...TArgs>
+		requires std::invocable<TCallable, TypeTraits::TContainerTypeFor<TContainerArgs>&, TArgs...>
+	FDelegateHandle Internal_Add(const FGameplayTag& GameplayTag, TCallable&& Callable, TArgs&&... Args)
+	{
+		using FEventContainerType = TypeTraits::TContainerTypeFor<TContainerArgs>;
+		
+		if (TSharedRef<IEventContainerBase>* BaseEventContainerPtr{ ActiveEvents.Find(GameplayTag) })
+		{
+			auto& BaseEventContainerRef{ *BaseEventContainerPtr };
+			if (ensureMsgf(BaseEventContainerRef->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to add a callback of a different type.")))
+			{
+				auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainerRef);
+				return Callable(*EventContainer, Forward<TFunction>(Args)...);
 			}
 			
 			return {};
 		}
 
-		return Callable(*ActiveEvents.Add(GameplayTag, MakeShared<FEventContainerType>()));
+		auto* EventContainer = static_cast<FEventContainerType*>(&*ActiveEvents.Add(GameplayTag, MakeShared<FEventContainerType>()));
+		return Callable(*EventContainer, Forward<TFunction>(Args)...);
 	}
 };
