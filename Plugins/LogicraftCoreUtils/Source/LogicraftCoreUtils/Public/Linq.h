@@ -11,11 +11,6 @@ namespace Linq
 		namespace Concept
 		{
 			// C++20 Concepts to constrain template types used in the library.
-
-			// Checks if a type is specifically a TArray.
-			template <typename Collection, typename T>
-			concept IsCollection = std::is_same_v<Collection, TArray<T>>;
-
 			// Checks if a type inherits from UObject (Unreal Engine Object).
 			template <typename Ty>
 			concept DerivedFromObject = std::derived_from<Ty, UObject>;
@@ -631,7 +626,8 @@ namespace Linq
 
 			// Sorts the elements based on a key returned by the selector.
 			template <typename Sel>
-			requires std::predicate<Sel, T>
+			requires std::totally_ordered<std::invoke_result_t<Sel, T>> || requires (std::invoke_result_t<Sel, T> Result)
+			{ Result.operator<(std::declval<decltype(Result)>()); }
 			TLinqQuery<T> OrderBy(Sel&& Selector)
 			{
 				return TLinqQuery<T>(MakeUnique<TSelectorOrderByIterator<T, Sel>>(
