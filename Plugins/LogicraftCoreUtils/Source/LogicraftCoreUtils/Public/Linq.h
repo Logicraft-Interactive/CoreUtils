@@ -505,7 +505,8 @@ namespace Linq
 
 		// Standard default sorting.
 		template<typename T>
-		requires std::totally_ordered<T>
+		requires std::totally_ordered<T> ||
+			requires (T Result){ Result.operator<(std::declval<decltype(Result)>()); }
 		class TSimpleOrderByIterator : public TOrderByBaseIterator<T>
 		{
 		protected:
@@ -523,6 +524,8 @@ namespace Linq
 
 		// Sorting by a specific property selector.
 		template<typename T, typename Sel>
+		requires std::totally_ordered<std::invoke_result_t<Sel, T>> ||
+			requires (std::invoke_result_t<Sel, T> Result){ Result.operator<(std::declval<decltype(Result)>()); }
 		class TSelectorOrderByIterator : public TOrderByBaseIterator<T>
 		{
 			Sel Selector;
@@ -626,8 +629,6 @@ namespace Linq
 
 			// Sorts the elements based on a key returned by the selector.
 			template <typename Sel>
-			requires std::totally_ordered<std::invoke_result_t<Sel, T>> || requires (std::invoke_result_t<Sel, T> Result)
-			{ Result.operator<(std::declval<decltype(Result)>()); }
 			TLinqQuery<T> OrderBy(Sel&& Selector)
 			{
 				return TLinqQuery<T>(MakeUnique<TSelectorOrderByIterator<T, Sel>>(
