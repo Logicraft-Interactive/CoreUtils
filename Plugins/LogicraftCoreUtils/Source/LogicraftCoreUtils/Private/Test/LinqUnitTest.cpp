@@ -46,7 +46,7 @@ bool FLinqIntegerTest::RunTest(const FString& Parameters)
 	.Take(4)
 	.Count([](int32 N){return N % 2 == 0;});
 
-	TestEqual("Count of even number from 1 to 4 should return 2", Count, 2);
+	TestEqual("Count of even numbers from 1 to 4 should return 2", Count, 2);
 	
 	// Test: Any / All
 	bool bHasNegative = Linq::Start(Numbers).Any([](int32 N) { return N < 0; });
