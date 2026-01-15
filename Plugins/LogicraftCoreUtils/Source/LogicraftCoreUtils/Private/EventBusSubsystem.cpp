@@ -15,16 +15,16 @@ UEventBusSubsystem::ThisClass* UEventBusSubsystem::Get(const UObject* WorldConte
 	return nullptr;
 }
 
-bool UEventBusSubsystem::Remove(const FGameplayTag& GameplayTag, FDelegateHandle DelegateHandle)
+bool UEventBusSubsystem::Remove(const FGameplayTag& GameplayTag, FDelegateHandle Handle)
 {
-	if (!DelegateHandle.IsValid())
+	if (!Handle.IsValid())
 	{
 		return false;
 	}
 
-	if (auto BaseEventContainer{ Internal_Find(GameplayTag) })
+	if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 	{
-		const bool Result{ BaseEventContainer->Remove(DelegateHandle) };
+		const bool Result{ BaseEventContainer->Remove(Handle) };
 		if (BaseEventContainer->GetSubscriberCount() == 0)
 		{
 			Internal_Remove(GameplayTag);

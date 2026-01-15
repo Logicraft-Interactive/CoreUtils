@@ -18,7 +18,7 @@ UE_DEFINE_GAMEPLAY_TAG_COMMENT(Test_Event_Bus, "Test.Event.Bus", "Tag pour le bu
 
 void FEventBusSpec::Define()
 {
-    BeforeEach([this]()
+    BeforeEach([this]
     {
         TestWorld = UWorld::CreateWorld(EWorldType::Game, false);
        
@@ -36,7 +36,7 @@ void FEventBusSpec::Define()
         TestTag = FGameplayTag::RequestGameplayTag(TEXT("Test.Event.Bus"));
     });
 
-    AfterEach([this]()
+    AfterEach([this]
     {
         if (TestWorld)
         {
@@ -47,9 +47,9 @@ void FEventBusSpec::Define()
         EventBus = nullptr;
     });
 
-    Describe("Basic Functionality", [this]()
+    Describe("Basic Functionality", [this]
     {
-        It("Should broadcast simple integers correctly", [this]()
+        It("Should broadcast simple integers correctly", [this]
         {
             int32 ReceivedValue = 0;
             
@@ -65,7 +65,7 @@ void FEventBusSpec::Define()
             TestEqual("Received Value should be 42", ReceivedValue, 42);
         });
 
-        It("Should handle multiple arguments", [this]()
+        It("Should handle multiple arguments", [this]
         {
             FString ReceivedStr;
             float ReceivedFloat = 0.0f;
@@ -81,11 +81,19 @@ void FEventBusSpec::Define()
             TestEqual("String match", ReceivedStr, FString("Hello"));
             TestEqual("Float match", ReceivedFloat, 3.14f);
         });
+
+        It("Should be able to compare types", [this]
+        {
+            EventBus->AddLambda(TestTag, [](int, float, FString){});
+            
+            TestTrue("Types match", EventBus->IsArgsType<int, float, FString>(TestTag));
+            TestFalse("Types don't match", EventBus->IsArgsType<int, float, char>(TestTag));
+        });
     });
 
-    Describe("Lifecycle Management", [this]()
+    Describe("Lifecycle Management", [this]
     {
-        It("Should unregister automatically when handle is used", [this]()
+        It("Should unregister automatically when handle is used", [this]
         {
             int32 CallCount = 0;
             FDelegateHandle Handle = EventBus->AddLambda(TestTag, [&](int32) { CallCount++; });
@@ -98,7 +106,7 @@ void FEventBusSpec::Define()
             TestFalse("Tag should no longer be bound", EventBus->IsBound(TestTag));
         });
 
-        It("Should NOT crash on Re-entrancy (Removing self during broadcast)", [this]()
+        It("Should NOT crash on Re-entrancy (Removing self during broadcast)", [this]
         {
             struct FReentrantHelper
             {
