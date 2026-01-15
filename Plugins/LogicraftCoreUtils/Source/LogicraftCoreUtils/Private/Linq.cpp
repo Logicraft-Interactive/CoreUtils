@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 
 #include "Linq.h"
