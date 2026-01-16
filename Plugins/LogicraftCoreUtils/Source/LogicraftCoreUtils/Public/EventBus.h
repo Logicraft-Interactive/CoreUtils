@@ -3,9 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Chain.h"
 #include "GameplayTagContainer.h"
 #include "Subsystems/WorldSubsystem.h"
-#include "EventBusSubsystem.generated.h"
+#include "EventBus.generated.h"
 
 DECLARE_MULTICAST_DELEGATE(TestDelegate)
 
@@ -217,7 +218,7 @@ namespace EventBus
  * are removed a new signature can be attributed.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API UEventBusSubsystem : public UWorldSubsystem
+class LOGICRAFTCOREUTILS_API UEventBus : public UWorldSubsystem
 {
 	GENERATED_BODY()
 
@@ -231,19 +232,24 @@ public:
 	 *
 	 * UObject delegates keep a weak reference to your object.
 	 *
-	 * @param	GameplayTag Associated gameplay tag.
-	 * @param	UserObject	User object to bind to
-	 * @param	Function	Class method function address
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   UserObject   User object to bind to
+	 * @param   Function     Class method function address
 	 */
 	template<typename TUserObject, typename TMemberFunction>
 		requires std::is_base_of_v<UObject, TUserObject> &&
 			std::is_member_function_pointer_v<TMemberFunction>
-	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TUserObject* UserObject, TMemberFunction Function)
+	static FDelegateHandle AddUObject(const UObject* WorldContext, const FGameplayTag& GameplayTag, TUserObject* UserObject, TMemberFunction Function)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-		[UserObject, Function](auto& EventContainer)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, UserObject, Function](ThisClass* EventBus)
 		{
-			return EventContainer.MulticastDelegate.AddUObject(UserObject, Function);
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+			[UserObject, Function](auto& EventContainer)
+			{
+				return EventContainer.MulticastDelegate.AddUObject(UserObject, Function);
+			});
 		});
 	}
 
@@ -251,17 +257,18 @@ public:
 	 * Adds a UObject-based member function delegate.
 	 *
 	 * UObject delegates keep a weak reference to your object.
-	 *
-	 * @param	GameplayTag Associated gameplay tag.
-	 * @param	UserObject	User object to bind to
-	 * @param	Function	Class method function address
+	 * 
+	 * @param   WorldContext Context to get the world.
+	 * @param	GameplayTag  Associated gameplay tag.
+	 * @param	UserObject	 User object to bind to
+	 * @param	Function	 Class method function address
 	 */
 	template<typename TUserObject, typename TMemberFunction>
 		requires std::is_base_of_v<UObject, TUserObject> &&
 			std::is_member_function_pointer_v<TMemberFunction>
-	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, TMemberFunction Function)
+	static FDelegateHandle AddUObject(const UObject* WorldContext, const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, TMemberFunction Function)
 	{
-		return AddUObject(GameplayTag, UserObject.Get(), Function);
+		return AddUObject(WorldContext, GameplayTag, UserObject.Get(), Function);
 	}
 
 	/**
@@ -269,19 +276,24 @@ public:
 	 *
 	 * UFunction delegates keep a weak reference to your object.
 	 *
+	 * @param   WorldContext Context to get the world.
 	 * @param	GameplayTag  Associated gameplay tag.
 	 * @param	UserObject	 User object to bind to
 	 * @param	FunctionName Class method function address
 	 */
 	template<typename TUserObject, typename ...TFunctionArgs>
 		requires std::is_base_of_v<UObject, TUserObject>
-	FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TUserObject* UserObject, const FName& FunctionName)
+	static FDelegateHandle AddUFunction(const UObject* WorldContext, const FGameplayTag& GameplayTag, TUserObject* UserObject, const FName& FunctionName)
 	{
-		return Internal_AddCallback<TFunctionArgs>(GameplayTag,
-		[UserObject](auto& EventContainer, const FName& InFunctionName)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, UserObject, &FunctionName](ThisClass* EventBus)
 		{
-			return EventContainer.MulticastDelegate.AddUFunction(UserObject, InFunctionName);
-		}, FunctionName);
+			return EventBus->Internal_AddCallback<TFunctionArgs...>(GameplayTag,
+			[UserObject, &FunctionName](auto& EventContainer)
+			{
+				return EventContainer.MulticastDelegate.AddUFunction(UserObject, FunctionName);
+			});
+		});
 	}
 
 	/**
@@ -289,67 +301,89 @@ public:
 	 *
 	 * UFunction delegates keep a weak reference to your object.
 	 *
+	 * @param   WorldContext Context to get the world.
 	 * @param	GameplayTag  Associated gameplay tag.
 	 * @param	UserObject	 User object to bind to
 	 * @param	FunctionName Class method function address
 	 */
 	template<typename TUserObject, typename ...TFunctionArgs>
 		requires std::is_base_of_v<UObject, TUserObject>
-	FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, const FName& FunctionName)
+	static FDelegateHandle AddUFunction(const UObject* WorldContext, const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, const FName& FunctionName)
 	{
-		return AddUFunction<TUserObject, TFunctionArgs...>(GameplayTag, UserObject.Get(), FunctionName);
+		return AddUFunction<TUserObject, TFunctionArgs...>(WorldContext, GameplayTag, UserObject.Get(), FunctionName);
 	}
 	
 	/**
 	 * Adds a delegate instance to this multicast delegate's invocation list.
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param Delegate	  The delegate to add.
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   Delegate	 The delegate to add.
 	 */
 	template<EventBus::Concepts::IsMulticastDelegate TDelegate>
-	FDelegateHandle Add(const FGameplayTag& GameplayTag, TDelegate&& Delegate)
+	static FDelegateHandle Add(const UObject* WorldContext, const FGameplayTag& GameplayTag, TDelegate&& Delegate)
 	{
-		return Internal_AddCallback<TDelegate>(GameplayTag,
-		[]<typename TInDelegate>(auto& EventContainer, TInDelegate&& InDelegate)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag]<typename TInDelegate>(ThisClass* EventBus, TInDelegate&& InDelegate)
 		{
-			EventContainer.MulticastDelegate.Add(Forward<TInDelegate>(InDelegate));
-		}, Forward<TDelegate>(Delegate));
+			return EventBus->Internal_AddCallback<TDelegate>(GameplayTag,
+			[]<typename TCallbackDelegate>(auto& EventContainer, TCallbackDelegate&& CallbackDelegate)
+			{
+				EventContainer.MulticastDelegate.Add(Forward<TCallbackDelegate>(CallbackDelegate));
+			},
+			Forward<TInDelegate>(InDelegate));
+		},
+		Forward<TDelegate>(Delegate));
 	}
 
 	/**
 	 * Adds a weak object C++ lambda delegate
 	 * technically this works for any functor types, but lambdas are the primary use case
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param UserObject  User object to bind to
-	 * @param Functor	  Functor (e.g. Lambda)
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   UserObject   User object to bind to
+	 * @param   Functor	     Functor (e.g. Lambda)
 	 */
 	template<typename TUserObject, EventBus::Concepts::IsFunctor TFunctor>
 		requires std::is_base_of_v<UObject, TUserObject>
-	FDelegateHandle AddWeakLambda(const FGameplayTag& GameplayTag, TUserObject* UserObject, TFunctor&& Functor)
+	static FDelegateHandle AddWeakLambda(const UObject* WorldContext, const FGameplayTag& GameplayTag, TUserObject* UserObject, TFunctor&& Functor)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[UserObject]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, UserObject]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
 		{
-			return EventContainer.MulticastDelegate.AddWeakLambda(UserObject, Forward<TInFunctor>(InFunctor));
-		}, Forward<TFunctor>(Functor));
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+			[UserObject]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
+			{
+				return EventContainer.MulticastDelegate.AddWeakLambda(UserObject, Forward<TCallbackFunctor>(CallbackFunctor));
+			},
+			Forward<TInFunctor>(InFunctor));
+		},
+		Forward<TFunctor>(Functor));
 	}
 
 	/**
 	 * Adds a C++ lambda delegate
 	 * technically this works for any functor types, but lambdas are the primary use case
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param Functor	  Functor (e.g. Lambda)
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag Associated gameplay tag.
+	 * @param   Functor	  Functor (e.g. Lambda)
 	 */
 	template<EventBus::Concepts::IsFunctor TFunctor>
-	FDelegateHandle AddLambda(const FGameplayTag& GameplayTag, TFunctor&& Functor)
+	static FDelegateHandle AddLambda(const UObject* WorldContext, const FGameplayTag& GameplayTag, TFunctor&& Functor)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
 		{
-			return EventContainer.MulticastDelegate.AddLambda(Forward<TInFunctor>(InFunctor));
-		}, Forward<TFunctor>(Functor));
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+			[]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
+			{
+				return EventContainer.MulticastDelegate.AddLambda(Forward<TCallbackFunctor>(CallbackFunctor));
+			},
+			Forward<TInFunctor>(InFunctor));	
+		},
+		Forward<TFunctor>(Functor));
 	}
 
 	/**
@@ -358,18 +392,23 @@ public:
 	 * Raw pointer doesn't use any sort of reference, so may be unsafe to call if the object was
 	 * deleted out from underneath your delegate. Be careful when calling Execute()!
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param UserObject  User object to bind to
-	 * @param Function	  Class method function address
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   UserObject   User object to bind to
+	 * @param   Function	 Class method function address
 	 */
 	template<typename TUserClass, typename TMemberFunction>
 		requires !std::is_base_of_v<UObject, TUserClass> && std::is_member_function_pointer_v<TMemberFunction>
-	FDelegateHandle AddRaw(const FGameplayTag& GameplayTag, TUserClass* UserObject, TMemberFunction Function)
+	static FDelegateHandle AddRaw(const UObject* WorldContext, const FGameplayTag& GameplayTag, TUserClass* UserObject, TMemberFunction Function)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-		[UserObject, Function](auto& EventContainer)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, UserObject, Function](ThisClass* EventBus)
 		{
-			return EventContainer.MulticastDelegate.AddRaw(UserObject, Function);
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+			[UserObject, Function](auto& EventContainer)
+			{
+				return EventContainer.MulticastDelegate.AddRaw(UserObject, Function);
+			});	
 		});
 	}
 
@@ -378,25 +417,30 @@ public:
 	 *
 	 * Shared pointer delegates keep a weak reference to your object.
 	 *
-	 * @param GameplayTag   Associated gameplay tag.
-	 * @param UserObjectRef User object to bind to
-	 * @param Function	    Class method function address
+	 * @param   WorldContext  Context to get the world.
+	 * @param   GameplayTag   Associated gameplay tag.
+	 * @param   UserObjectRef User object to bind to
+	 * @param   Function	  Class method function address
 	 */
 	template<typename TSharedRefType, ESPMode Mode, typename TMemberFunction>
 		requires std::is_member_function_pointer_v<TMemberFunction>
-	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& UserObjectRef, TMemberFunction Function)
+	static FDelegateHandle AddSP(const UObject* WorldContext, const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& UserObjectRef, TMemberFunction Function)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-		[&UserObjectRef, Function](auto& EventContainer)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, &UserObjectRef, Function](ThisClass* EventBus)
 		{
-			if constexpr (Mode == ESPMode::ThreadSafe)
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+			[&UserObjectRef, Function](auto& EventContainer)
 			{
-				return EventContainer.MulticastDelegate.AddThreadSafeSP(UserObjectRef, Function);
-			}
-			else
-			{
-				return EventContainer.MulticastDelegate.AddSP(UserObjectRef, Function);
-			}
+				if constexpr (Mode == ESPMode::ThreadSafe)
+				{
+					return EventContainer.MulticastDelegate.AddThreadSafeSP(UserObjectRef, Function);
+				}
+				else
+				{
+					return EventContainer.MulticastDelegate.AddSP(UserObjectRef, Function);
+				}
+			});
 		});
 	}
 
@@ -405,51 +449,64 @@ public:
 	 *
 	 * Shared pointer delegates keep a weak reference to your object.
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param UserObject  User object to bind to
-	 * @param Function    Class method function address
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   UserObject   User object to bind to
+	 * @param   Function     Class method function address
 	 */
 	template<typename TSharedType, ESPMode Mode, typename TMemberFunction>
 		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType> &&
 			std::is_member_function_pointer_v<TMemberFunction>
-	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, TSharedType* UserObject, TMemberFunction Function)
+	static FDelegateHandle AddSP(const UObject* WorldContext, const FGameplayTag& GameplayTag, TSharedType* UserObject, TMemberFunction Function)
 	{
-		return AddSP(GameplayTag, StaticCastSharedRef<TSharedType, Mode>(UserObject->AsShared()), Function);
+		return AddSP(WorldContext, GameplayTag, StaticCastSharedRef<TSharedType, Mode>(UserObject->AsShared()), Function);
 	}
 	
 	/**
 	 * Adds a weak shared pointer C++ lambda delegate
 	 * technically this works for any functor types, but lambdas are the primary use case
 	 *
-	 * @param GameplayTag   Associated gameplay tag.
-	 * @param UserObjectRef	User object to bind to
-	 * @param Functor		Functor (e.g. Lambda)
+	 * @param   WorldContext  Context to get the world.
+	 * @param   GameplayTag   Associated gameplay tag.
+	 * @param   UserObjectRef User object to bind to
+	 * @param   Functor		  Functor (e.g. Lambda)
 	 */
 	template<typename TSharedType, ESPMode Mode, EventBus::Concepts::IsFunctor TFunctor>
 		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType>
-	FDelegateHandle AddSPLambda(const FGameplayTag& GameplayTag, const TSharedType* UserObjectRef, TFunctor&& Functor)
+	static FDelegateHandle AddSPLambda(const UObject* WorldContext, const FGameplayTag& GameplayTag, const TSharedType* UserObjectRef, TFunctor&& Functor)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-		[&UserObjectRef]<typename TInFunctor>(auto& EventContainer, TInFunctor&& InFunctor)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, UserObjectRef]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
 		{
-			return EventContainer.MulticastDelegate.AddSPLambda(UserObjectRef, Forward<TInFunctor>(InFunctor));
-		}, Forward<TFunctor>(Functor));
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+			[&UserObjectRef]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
+			{
+				return EventContainer.MulticastDelegate.AddSPLambda(UserObjectRef, Forward<TCallbackFunctor>(CallbackFunctor));
+			},
+			Forward<TInFunctor>(InFunctor));
+		},
+		Forward<TFunctor>(Functor));
 	}
 
 	/**
 	 * Adds a raw C++ pointer global function delegate
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param Function	  Function pointer
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   Function	 Function pointer
 	 */
 	template<typename TFunction>
 		requires std::is_function_v<TFunction>
-	FDelegateHandle AddStatic(const FGameplayTag& GameplayTag, TFunction Function)
+	static FDelegateHandle AddStatic(const UObject* WorldContext, const FGameplayTag& GameplayTag, TFunction Function)
 	{
-		return Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
-		[Function](auto& EventContainer)
+		return Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag, Function](ThisClass* EventBus)
 		{
-			return EventContainer.MulticastDelegate.AddStatic(Function);
+			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
+			[Function](auto& EventContainer)
+            {
+            	return EventContainer.MulticastDelegate.AddStatic(Function);
+            });	
 		});
 	}
 
@@ -458,22 +515,27 @@ public:
 	 *
 	 * The constness of this method allows for broadcasting from const functions.
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param Args		  Callback arguments.
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   Args		 Callback arguments.
 	 */
 	template<typename ...TArgs>
-	void Broadcast(const FGameplayTag& GameplayTag, TArgs&&... Args)
+	static void Broadcast(const UObject* WorldContext, const FGameplayTag& GameplayTag, TArgs&&... Args)
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
 		
-		if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
+		Internal_ExecuteOnValidContext(WorldContext,
+		[&GameplayTag]<typename ...TInArgs>(const ThisClass* EventBus, TInArgs&&... InArgs)
 		{
-			if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to broadcast a callback of a different type.")))
+			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 			{
-				auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainer);
-				EventContainer->MulticastDelegate.Broadcast(Forward<TArgs>(Args)...);
+				if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to broadcast a callback of a different type.")))
+				{
+					auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainer);
+					EventContainer->MulticastDelegate.Broadcast(Forward<TInArgs>(InArgs)...);
+				}
 			}
-		}
+		}, Forward<TArgs>(Args)...);
 	}
 
 	/**
@@ -481,57 +543,80 @@ public:
 	 *
 	 * Note that the order of the delegate instances may not be preserved!
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param Handle The handle of the delegate instance to remove.
-	 * @return  true if the delegate was successfully removed.
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   Handle       The handle of the delegate instance to remove.
+	 * @return  True if the delegate was successfully removed.
 	 */
-	bool Remove(const FGameplayTag& GameplayTag, FDelegateHandle Handle);
+	static bool Remove(const UObject* WorldContext, const FGameplayTag& GameplayTag, FDelegateHandle Handle);
 
 	/**
 	 * Removes all functions from this multi-cast delegate's invocation list that are bound to the specified UserObject.
 	 * Note that the order of the delegates may not be preserved!
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @param UserObject The object to remove all delegates for.
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @param   UserObject   The object to remove all delegates for.
 	 * @return  The number of delegates successfully removed.
 	 */
-	int32 RemoveAll(const FGameplayTag& GameplayTag, const void* UserObject);
+	static int32 RemoveAll(const UObject* WorldContext, const FGameplayTag& GameplayTag, const void* UserObject);
 
 	/**
 	 * Checks to see if any functions are bound to this multi-cast delegate.
 	 *
-	 * @param GameplayTag Associated gameplay tag.
-	 * @return true if any functions are bound, false otherwise.
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @return True if any functions are bound, false otherwise.
 	 */
-	bool IsBound(const FGameplayTag& GameplayTag) const;
+	static bool IsBound(const UObject* WorldContext, const FGameplayTag& GameplayTag);
 
 	/** 
 	 * Checks to see if any functions are bound to the given user object.
 	 *
-	 * @param GameplayTag Associated gameplay tag.
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
 	 * @return True if any functions are bound to InUserObject, false otherwise.
 	 */
-	bool IsBoundToObject(const FGameplayTag& GameplayTag, const void* UserObject) const;
+	static bool IsBoundToObject(const UObject* WorldContext, const FGameplayTag& GameplayTag, const void* UserObject);
 
 	/**
 	 * Checks to see if the given types correspond to the current associated signature with the gameplay tag. 
-	 * 
-	 * @param GameplayTag Associated gameplay tag.
-	 * @return True if the types match.
+	 *
+	 * @param   WorldContext Context to get the world.
+	 * @param   GameplayTag  Associated gameplay tag.
+	 * @return  True if the types match.
 	 */
 	template<typename ...TArgs>
-	bool IsArgsType(const FGameplayTag& GameplayTag)
+	static bool IsArgsType(const UObject* WorldContext, const FGameplayTag& GameplayTag)
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
-		
-		if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
+
+		return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](const ThisClass* EventBus)
 		{
-			return BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID();
+			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
+			{
+				return BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID();
+			}
+
+			return false;
+		});
+	}
+	
+private:
+	template<typename TCallable, typename ...TArgs>
+		requires std::invocable<TCallable, ThisClass*, TArgs...>
+	static auto Internal_ExecuteOnValidContext(const UObject* WorldContext, TCallable&& Callable, TArgs&&... Args)
+	{
+		using ReturnType = std::invoke_result_t<TCallable, ThisClass*, TArgs...>;
+		
+		if (ThisClass* EventBus{ Get(WorldContext) })
+		{
+			return Callable(EventBus, Forward<TArgs>(Args)...);
 		}
 
-		return false;
+		return ReturnType{};
 	}
-private:
+	
 	template<typename TContainerArgs, typename TCallable, typename ...TArgs>
 		requires std::invocable<TCallable, EventBus::TypeTraits::TContainerTypeFor<TContainerArgs>&, TArgs...>
 	FDelegateHandle Internal_AddCallback(const FGameplayTag& GameplayTag, TCallable&& Callable, TArgs&&... Args)
