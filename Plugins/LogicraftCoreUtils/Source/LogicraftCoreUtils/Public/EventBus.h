@@ -136,32 +136,26 @@ namespace EventBus
 {
 	namespace TypeTraits
 	{
-		namespace Private
+		template<typename, typename...>
+		struct TIsFunctor
 		{
-			template<typename, typename, typename...>
-			struct TIsFunctor
-			{
-				using FFunctionType = void;
-				constexpr static bool bValue = false;
-			};
+			constexpr static bool bValue = false;
+		};
 
-			template<typename TReturn, typename TClass, typename ...TArgs>
-			struct TIsFunctor<TReturn (TClass::*)(TArgs...), TClass, TTuple<TArgs...>>
-			{
-				using FFunctionType = TReturn (TClass::*)(TArgs...);
-				constexpr static bool bValue = std::is_invocable_v<FFunctionType, TClass, TArgs...>;
-			};
+		template<typename TReturn, typename TClass, typename ...TArgs>
+		struct TIsFunctor<TReturn (TClass::*)(TArgs...), TTuple<TArgs...>>
+		{
+			constexpr static bool bValue = std::is_invocable_v<TReturn (TClass::*)(TArgs...), TClass, TArgs...>;
+		};
 
-			template<typename TReturn, typename TClass, typename ...TArgs>
-			struct TIsFunctor<TReturn (TClass::*)(TArgs...) const, TClass, TTuple<TArgs...>>
-			{
-				using FFunctionType = TReturn (TClass::*)(TArgs...) const;
-				constexpr static bool bValue = std::is_invocable_v<FFunctionType, TClass, TArgs...>;
-			};
+		template<typename TReturn, typename TClass, typename ...TArgs>
+		struct TIsFunctor<TReturn (TClass::*)(TArgs...) const, TTuple<TArgs...>>
+		{
+			constexpr static bool bValue = std::is_invocable_v<TReturn (TClass::*)(TArgs...) const, TClass, TArgs...>;
+		};
 
-			template<typename TMemberFunction, typename TClass, typename ...TArgs>
-			constexpr static bool TIsFunctor_V = TIsFunctor<TMemberFunction, TClass, TArgs...>::bValue;
-		} // Private
+		template<typename TMemberFunction, typename ...TArgs>
+		constexpr static bool TIsFunctor_V = TIsFunctor<TMemberFunction, TArgs...>::bValue;
 
 		template<typename>
 		struct TIsMulticastDelegate : std::false_type {};
@@ -201,8 +195,8 @@ namespace EventBus
 
 		template<typename TFunctor>
 		concept IsFunctor =
-			TypeTraits::Private::TIsFunctor_V<
-				decltype(&TFunctor::operator()), TFunctor, typename ::TypeTraits::TFunctionTraits<TFunctor>::FArgsType>;
+			TypeTraits::TIsFunctor_V<
+				decltype(&TFunctor::operator()), typename ::TypeTraits::TFunctionTraits<TFunctor>::FArgsType>;
 	} // Concepts
 } // EventBus
 
