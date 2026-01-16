@@ -77,11 +77,12 @@ namespace Linq
 		template <typename T>
 		class TLValueSourceIterator : public ILinqIterator<T>
 		{
-			const TArray<T>* Collection = nullptr;
+			using FCollectionType = const TArray<T>*;
+			FCollectionType Collection = nullptr;
 			int Current = -1;
 
 		public:
-			explicit TLValueSourceIterator(const TArray<T>* InSource)
+			explicit TLValueSourceIterator(FCollectionType InSource)
 				: Collection(InSource)
 			{
 			}
@@ -107,11 +108,12 @@ namespace Linq
 		template <typename T>
 		class TRValueSourceIterator : public ILinqIterator<T>
 		{
-			TArray<T> Collection{};
+			using FCollectionType = TArray<T> ;
+			FCollectionType Collection{};
 			int Current = -1;
 
 		public:
-			explicit TRValueSourceIterator(TArray<T>&& InSource)
+			explicit TRValueSourceIterator(FCollectionType&& InSource)
 				: Collection(MoveTemp(InSource))
 			{
 			}
@@ -142,9 +144,9 @@ namespace Linq
 
 		public:
 			template <typename P = Pred>
-			requires std::is_same_v<P, Pred>
+			requires std::is_same_v<std::remove_cvref_t<P>, std::remove_cvref_t<Pred>>
 			TWhereIterator(TUniquePtr<ILinqIterator<T>>&& InSource, P&& InPredicate)
-				: Source(MoveTemp(InSource)), Predicate(Forward<Pred>(InPredicate))
+				: Source(MoveTemp(InSource)), Predicate(Forward<P>(InPredicate))
 			{
 			}
 
@@ -184,9 +186,9 @@ namespace Linq
 
 		public:
 			template <typename S = Sel>
-			requires std::is_same_v<S, Sel>
+			requires std::is_same_v<std::remove_cvref_t<S>, std::remove_cvref_t<Sel>>
 			TSelectIterator(TUniquePtr<ILinqIterator<In>>&& InSource, S&& InSelector)
-				: Source(MoveTemp(InSource)), Selector(Forward<Sel>(InSelector))
+				: Source(MoveTemp(InSource)), Selector(Forward<S>(InSelector))
 			{
 			}
 
@@ -223,9 +225,9 @@ namespace Linq
 
 		public:
 			template <typename F = Func>
-			requires std::is_same_v<F, Func>
+			requires std::is_same_v<std::remove_cvref_t<F>, std::remove_cvref_t<Func>>
 			TApplyIterator(TUniquePtr<ILinqIterator<T>>&& InSource, F&& InModifier)
-				: Source(MoveTemp(InSource)), Modifier(Forward<Func>(InModifier))
+				: Source(MoveTemp(InSource)), Modifier(Forward<F>(InModifier))
 			{
 			}
 
@@ -260,9 +262,9 @@ namespace Linq
 
 		public:
 			template <typename F = Func>
-			requires std::is_same_v<F, Func>
+			requires std::is_same_v<std::remove_cvref_t<F>, std::remove_cvref_t<Func>>
 			TExecuteIterator(TUniquePtr<ILinqIterator<T>>&& InSource, F&& InAction)
-				: Source(MoveTemp(InSource)), Modifier(Forward<Func>(InAction))
+				: Source(MoveTemp(InSource)), Modifier(Forward<F>(InAction))
 			{
 			}
 
@@ -506,7 +508,7 @@ namespace Linq
 		// Standard default sorting.
 		template<typename T>
 		requires std::totally_ordered<T> ||
-			requires (T Result){ Result.operator<(std::declval<decltype(Result)>()); }
+			requires (T Result){ Result < std::declval<decltype(Result)>(); }
 		class TSimpleOrderByIterator : public TOrderByBaseIterator<T>
 		{
 		protected:
@@ -525,7 +527,7 @@ namespace Linq
 		// Sorting by a specific property selector.
 		template<typename T, typename Sel>
 		requires std::totally_ordered<std::invoke_result_t<Sel, T>> ||
-			requires (std::invoke_result_t<Sel, T> Result){ Result.operator<(std::declval<decltype(Result)>()); }
+			requires (std::invoke_result_t<Sel, T> Result){ Result <std::declval<decltype(Result)>(); }
 		class TSelectorOrderByIterator : public TOrderByBaseIterator<T>
 		{
 			Sel Selector;
@@ -537,16 +539,16 @@ namespace Linq
 			
 		public:
 			template<typename S = Sel>
-			requires std::is_same_v<S, Sel>
+			requires std::is_same_v<std::remove_cvref_t<S>, std::remove_cvref_t<Sel>>
 			explicit TSelectorOrderByIterator(TUniquePtr<ILinqIterator<T>>&& InSource, Sel&& InSelector)
-				: TOrderByBaseIterator<T>(MoveTemp(InSource)), Selector(Forward<Sel>(InSelector))
+				: TOrderByBaseIterator<T>(MoveTemp(InSource)), Selector(Forward<S>(InSelector))
 			{
 			}
 		};
 
 		// Sorting using a custom comparator.
 		template<typename T, typename Comp>
-		requires requires(T a, T b){ {a.operator<(b)} -> std::convertible_to<bool>; } || std::totally_ordered<T>
+		requires requires(T a, T b){ {a < b} -> std::convertible_to<bool>; } || std::totally_ordered<T>
 		class TComparatorOrderByIterator : public TOrderByBaseIterator<T>
 		{
 			Comp Selector;
@@ -558,7 +560,7 @@ namespace Linq
 			
 		public:
 			template<typename C = Comp>
-			requires std::is_same_v<C, Comp>
+			requires std::is_same_v<std::remove_cvref_t<C>, std::remove_cvref_t<Comp>>
 			explicit TComparatorOrderByIterator(TUniquePtr<ILinqIterator<T>>&& InSource, C&& InSelector)
 				: TOrderByBaseIterator<T>(MoveTemp(InSource)), Selector(Forward<C>(InSelector))
 			{
@@ -685,7 +687,7 @@ namespace Linq
 
 			// Returns the first element satisfying the predicate, or a default value if not found.
 			template <typename Pred, typename DefValue = T>
-			requires std::is_same_v<T, DefValue>
+			requires std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<DefValue>>
 			T FirstOrDefault(Pred&& Predicate, DefValue&& DefaultValue)
 			{
 				Iterator->Reset();
@@ -696,7 +698,7 @@ namespace Linq
 						return Iterator->GetCurrent();
 					}
 				}
-				return Forward<T>(DefaultValue);
+				return Forward<DefValue>(DefaultValue);
 			}
 
 			// Returns the last element satisfying the predicate. Crashes if not found.
@@ -722,7 +724,7 @@ namespace Linq
 
 			// Returns the last element satisfying the predicate, or a default value.
 			template <typename Pred, typename DefValue = T>
-			requires std::is_same_v<T, DefValue>
+			requires std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<DefValue>>
 			T LastOrDefault(Pred&& Predicate, DefValue&& DefaultValue)
 			{
 				Iterator->Reset();
@@ -738,7 +740,7 @@ namespace Linq
 				{
 					return *LastFound;
 				}
-				return Forward<T>(DefaultValue);
+				return Forward<DefValue>(DefaultValue);
 			}
 
 			// Returns the only element satisfying the predicate. Crashes if none or more than one exist.
