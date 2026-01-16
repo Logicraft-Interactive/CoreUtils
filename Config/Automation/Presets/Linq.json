@@ -1,0 +1,9 @@
+{
+	"id": "Linq",
+	"name": "Linq",
+	"enabledTests": [
+		"Project.Linq.IntegerLogic",
+		"Project.Linq.Sorting",
+		"Project.Linq.UObjectFeatures"
+	]
+}
