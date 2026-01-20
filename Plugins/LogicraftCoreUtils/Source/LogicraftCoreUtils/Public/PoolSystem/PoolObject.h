@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Poolable.h"
 #include "PoolSettings.h"
 #include "UObject/Object.h"
 #include "TimerHolder.h"
@@ -12,7 +13,7 @@ class IPoolable;
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable, BlueprintType)
 class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 {
 	GENERATED_BODY()
@@ -35,6 +36,8 @@ class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 	TOptional<int> NextIndex = NullOpt;
 	FTimerHolder ShrinkRoutineTimer;
 
+	static AActor* GetActor(const IPoolable* Poolable);
+	
 	void AddNewChunk();
 
 	bool FindNextIndex();
@@ -45,20 +48,25 @@ class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 	static void SwitchActorState(AActor* Actor,ESwitchState State);
 
 	void ShrinkRoutine();
+
+	TQueue<int> IndexQueue;
 	
 public:	
 	void SetupPoolObject(const FPoolSettings& InPoolSettings);
 
 	UFUNCTION(BlueprintCallable)
-	TScriptInterface<IPoolable> Spawn(const FTransform& SpawnTransform);
+	AActor* SpawnFromPool(const FTransform& SpawnTransform);
 
 	template<typename T>
-	T* Spawn(const FTransform& SpawnTransform)
+	T* SpawnFromPool(const FTransform& SpawnTransform)
 	{
-		return Cast<T>(Spawn(SpawnTransform).GetObject());
+		return Cast<T>(SpawnFromPool(SpawnTransform));
 	}
 
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	bool CanSpawn() const;
 
 	UFUNCTION(BlueprintCallable)
-	void Return(TScriptInterface<IPoolable> Poolable);
+	void ReturnToPool(AActor* Poolable);
+	
 };

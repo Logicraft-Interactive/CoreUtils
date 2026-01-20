@@ -4,88 +4,81 @@
 #include "PoolSystem/PoolObject.h"
 
 #include "PoolSystem/Poolable.h"
- 
+
+AActor* UPoolObject::GetActor(const IPoolable* Poolable)
+{
+	return static_cast<AActor*>(Poolable->_getUObject());
+}
+
+
 void UPoolObject::AddNewChunk()
 {
 	PoolArray.Reserve(PoolArray.Num() + PoolSettings.MinPoolSize);
-	NextIndex = PoolArray.Num();
-	for (int i = PoolArray.Num(); i < PoolArray.Num() - 1 + PoolSettings.MinPoolSize; ++i)
+	int InitialSize = PoolArray.Num();
+	for (int i = PoolArray.Num(); i < InitialSize + PoolSettings.MinPoolSize; ++i)
 	{
 		PoolArray.Add(FPoolableInfo{.Poolable = PoolSettings.WorldContext.Get()->SpawnActor<IPoolable>(PoolSettings.SpawnClass)});
+		SwitchActorState(GetActor(PoolArray[i].Poolable), ESwitchState::Deactivate);
+		IndexQueue.Enqueue(i);
 	}
 }
 
 bool UPoolObject::FindNextIndex()
 {
-	if (NextIndex)
+	if (IndexQueue.IsEmpty())
 	{
-		bool bHasFound = false;
-		for (int i = *NextIndex; i < PoolArray.Num(); ++i)
-		{
-			if (PoolArray[i].bIsFree)
-			{
-				NextIndex = i;
-				bHasFound = true;
-				break;
-			}
-		}
-
-		if (!bHasFound)
-		{
-			for (int i = 0; i < *NextIndex; ++i)
-			{
-				if (PoolArray[i].bIsFree)
-				{
-					NextIndex = i;
-					break;
-				}
-			}
-		}
+		NextIndex = NullOpt;
 	}
 	else
 	{
-		for (int i = 0; i < PoolArray.Num(); ++i)
-		{
-			if (PoolArray[i].bIsFree)
-			{
-				NextIndex = i;
-				break;
-			}
-		}
+		NextIndex = *IndexQueue.Peek();
+		IndexQueue.Pop();
 	}
+	
 	return NextIndex.IsSet();
 }
 
 IPoolable* UPoolObject::SpawnActor(const FTransform& SpawnTransform)
 {
-	IPoolable* Poolable = PoolArray[*NextIndex].Poolable;
-	PoolArray[*NextIndex].bIsFree = false;
-	if (ensureMsgf(Poolable && Poolable->_getUObject()->IsValidLowLevel(), TEXT("Selected pool actor is null!")))
+	auto& [Poolable, bIsFree, ReturnTime] = PoolArray[*NextIndex];
+	bIsFree = false;
+	if (!ensureMsgf(Poolable && Poolable->_getUObject()->IsValidLowLevel(), TEXT("Selected pool actor is null!")))
 	{
 		return nullptr;
 	}
 	
-	AActor* PoolableActor = static_cast<AActor*>(Poolable->_getUObject());
+	AActor* PoolableActor = GetActor(Poolable);
 	PoolableActor->SetActorTransform(SpawnTransform);
 	SwitchActorState(PoolableActor, ESwitchState::Activate);
 
 	IPoolable::Execute_OnSpawn(PoolableActor);
+	
+	FindNextIndex();
 	
 	return Poolable;
 }
 
 void UPoolObject::ReturnActor(int Index)
 {
-	const IPoolable* Poolable = PoolArray[Index].Poolable;
-	PoolArray[*NextIndex].bIsFree = true;
-	if (ensureMsgf(Poolable && !Poolable->_getUObject()->IsValidLowLevel(), TEXT("Selected pool actor is null!")))
+	auto& [Poolable, bIsFree, ReturnTime] = PoolArray[Index];
+	if (bIsFree)
 	{
 		return;
 	}
 	
-	AActor* PoolableActor = static_cast<AActor*>(Poolable->_getUObject());
+	bIsFree = true;
+	ReturnTime = 0.f; 
+	
+	if (!ensureMsgf(Poolable && Poolable->_getUObject()->IsValidLowLevel(), TEXT("Selected pool actor is null!")))
+	{
+		return;
+	}
+	
+	AActor* PoolableActor = GetActor(Poolable);
 	SwitchActorState(PoolableActor, ESwitchState::Deactivate);
 
+	IndexQueue.Enqueue(Index);
+	
 	IPoolable::Execute_OnReturn(PoolableActor);
 }
 
@@ -107,22 +100,41 @@ void UPoolObject::SwitchActorState(AActor* Actor, const ESwitchState State)
 
 void UPoolObject::ShrinkRoutine()
 {
-	for (int i = PoolSettings.MinPoolSize; i < PoolArray.Num(); ++i)
+	IndexQueue.Empty();
+	NextIndex = NullOpt;
+	
+	for (int i = 0; i < PoolArray.Num(); ++i)
 	{
+		if (PoolArray.Num() <= PoolSettings.MinPoolSize)
+		{
+			break;
+		}
 		FPoolableInfo& PoolableInfo = PoolArray[i];
+
+		if (!PoolableInfo.bIsFree)
+			continue;
+		
 		PoolableInfo.ReturnTime += PoolSettings.AutoShrinkUpdateTime;
 
 		if (PoolableInfo.ReturnTime >= PoolSettings.ShrinkObjectAfterReturnTime)
 		{
-			PoolArray.RemoveAt(i--);
-		}
+			GetActor(PoolArray[i].Poolable)->Destroy();
+			PoolArray.RemoveAtSwap(i--);
+		}		
 	}
+
+	for (int i = 0; i < PoolArray.Num(); ++i)
+	{
+		if (PoolArray[i].bIsFree)
+			IndexQueue.Enqueue(i);
+	}
+	FindNextIndex();
 }
 
 void UPoolObject::SetupPoolObject(const FPoolSettings& InPoolSettings)
 {
 	PoolSettings = InPoolSettings;
-	if (ensureMsgf(PoolSettings.WorldContext.IsValid(), TEXT("World Context of the pool is null!")))
+	if (!ensureMsgf(PoolSettings.WorldContext.IsValid(), TEXT("World Context of the pool is null!")))
 	{
 		return;
 	}
@@ -137,38 +149,52 @@ void UPoolObject::SetupPoolObject(const FPoolSettings& InPoolSettings)
 	}	
 }
 
-TScriptInterface<IPoolable> UPoolObject::Spawn(const FTransform& SpawnTransform)
+AActor* UPoolObject::SpawnFromPool(const FTransform& SpawnTransform)
 {
-	if (ensureMsgf(PoolSettings.WorldContext.IsValid(), TEXT("World Context of the pool is null!")))
+	if (!ensureMsgf(PoolSettings.WorldContext.IsValid(), TEXT("World Context of the pool is null!")))
 	{
 		return nullptr;
 	}
 	
 	if (!NextIndex && !FindNextIndex())
-	{		 
-		AddNewChunk();
-	}
-
-	TScriptInterface<IPoolable> Result;
-	if (ensureMsgf(NextIndex, TEXT("Couldn't find or allocate next actor!")))
 	{
-		return Result;
+		if (!PoolSettings.bAllowResize)
+		{
+			checkf(false, TEXT("Pool capacity exceeds!"))
+		}
+		else
+		{
+			AddNewChunk();
+			FindNextIndex();
+		}
 	}
 	
-	Result.SetInterface(SpawnActor(SpawnTransform));
+
+	if (!ensureMsgf(NextIndex, TEXT("Couldn't find or allocate next actor!")))
+	{
+		return nullptr;
+	}
 	
-	return Result;
+	return static_cast<AActor*>(SpawnActor(SpawnTransform)->_getUObject());
 }
 
-void UPoolObject::Return(TScriptInterface<IPoolable> Poolable)
+bool UPoolObject::CanSpawn() const
 {
-	if (!Poolable)
+	return PoolSettings.bAllowResize;
+}
+
+void UPoolObject::ReturnToPool(AActor* Poolable)
+{
+	if (!Poolable || !Poolable->Implements<UPoolable>())
 	{
 		return;
 	}
-	auto FindPredicate = [=](const FPoolableInfo& PoolableInfo){return PoolableInfo.Poolable == Poolable.GetInterface();};
+	auto FindPredicate = [=](const FPoolableInfo& PoolableInfo)
+	{
+		return PoolableInfo.Poolable == Poolable->GetInterfaceAddress(UPoolable::StaticClass());
+	};
 	
-	if (ensureMsgf(
+	if (!ensureMsgf(
 		PoolArray.ContainsByPredicate(FindPredicate),
 		TEXT("This poolable object is not from this pool!")))
 	{
@@ -177,3 +203,4 @@ void UPoolObject::Return(TScriptInterface<IPoolable> Poolable)
  
 	ReturnActor(PoolArray.IndexOfByPredicate(FindPredicate));
 }
+ 

@@ -68,20 +68,34 @@ bool FTimerHolder::RetrieveTimerManager()
 	{
 		return true;
 	}
-	
-	if (!GEngine)
+
+
+	if (GEngine)
 	{
-		return false;
-	}
-	
-	for (const FWorldContext& Context : GEngine->GetWorldContexts())
-	{
-		if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
+		for (const FWorldContext& Context : GEngine->GetWorldContexts())
 		{
-			TimerManager = &Context.World()->GetTimerManager();
-			return true;
+			if (Context.WorldType == EWorldType::Game || Context.WorldType == EWorldType::PIE)
+			{
+				TimerManager = &Context.World()->GetTimerManager();
+				return true;
+			}
 		}
 	}
 	
+	
+		
+#ifdef UE_EDITOR
+	if (!GEditor || !GEditor->GetEditorWorldContext().World())
+	{
+		return false;
+	}
+
+	TimerManager = &GEditor->GetEditorWorldContext().World()->GetTimerManager();
+
+	return true;
+#else
 	return false;
+#endif
+	
+	
 }

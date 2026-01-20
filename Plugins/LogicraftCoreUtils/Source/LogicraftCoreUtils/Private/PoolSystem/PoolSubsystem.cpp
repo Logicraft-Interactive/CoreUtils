@@ -23,3 +23,20 @@ UPoolObject* UPoolSubsystem::CreatePool(FPoolSettings PoolSettings)
 
 	return NewPoolObject;
 }
+
+UPoolObject* UPoolSubsystem::CreatePoolFromDataAsset(UClass* SpawnClass, UPoolSettingsDataAsset* PoolSettings)
+{
+	const FPoolSettings NewPoolSettings{.SpawnClass = SpawnClass,
+	.WorldContext = GetWorld(),
+	.bAllowResize = PoolSettings->bAllowResize,
+	.bAutoShrink = PoolSettings->bAutoShrink,
+	.MinPoolSize = PoolSettings->MinPoolSize,
+	.AutoShrinkUpdateTime = PoolSettings->AutoShrinkUpdateTime,
+	.ShrinkObjectAfterReturnTime = PoolSettings->ShrinkObjectAfterReturnTime};
+
+	UPoolObject* NewPoolObject = NewObject<UPoolObject>(this);
+	NewPoolObject->SetupPoolObject(NewPoolSettings);
+
+	return NewPoolObject;
+}
+ 

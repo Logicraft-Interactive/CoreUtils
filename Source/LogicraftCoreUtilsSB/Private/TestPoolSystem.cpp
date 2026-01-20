@@ -9,12 +9,12 @@
 
 void APoolableClassTest::OnReturn_Implementation()
 {
-	UE_LOG(LogTemp, Error, TEXT("Actor Spawned"));
+	UE_LOG(LogTemp, Error, TEXT("Actor Returned"));
 }
 
 void APoolableClassTest::OnSpawn_Implementation()
 {
-	UE_LOG(LogTemp, Error, TEXT("Actor Returned"));	
+	UE_LOG(LogTemp, Error, TEXT("Actor Spawned"));	
 }
 
 // Sets default values
@@ -32,20 +32,14 @@ void ATestPoolSystem::BeginPlay()
  	PoolObject = GetWorld()->GetSubsystem<UPoolSubsystem>()->CreatePool(FPoolSettings{
 		.SpawnClass = ActorToSpawn,
 		.WorldContext = GetWorld(),
+ 		.bAllowResize = false,
 		.MinPoolSize = 50
 	});
 
 	
-	TimerHolder.Schedule([&]
-	{
-		FTransform Transform;
-		Transform.SetLocation({FMath::RandRange(-500.0,500.0),
-			FMath::RandRange(-500.0,500.0),
-			0});
+	SpawnHolder.Schedule(this, &ThisClass::Spawn, FTimerParameters{.bIsLooping = true, .Rate = 1.f/4});
 
-			
-		PoolObject->Spawn<ATestPoolSystem>(Transform);
-	}, FTimerParameters{.bIsLooping = true, .Rate = 1.f});
+	ReturnHolder.Schedule(this, &ThisClass::Return, FTimerParameters{.bIsLooping = true, .Rate = 3.f/4});
 }
 
 // Called every frame
@@ -53,5 +47,29 @@ void ATestPoolSystem::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ATestPoolSystem::Spawn()
+{
+	FTransform Transform;
+	Transform.SetLocation({FMath::RandRange(-500.0,500.0),
+		FMath::RandRange(-500.0,500.0),
+		0});
+
+	auto Test = PoolObject->SpawnFromPool<APoolableClassTest>(Transform);
+	PoolableArray.Add(Test);
+}
+
+void ATestPoolSystem::Return()
+{
+	PoolableArray.RemoveAll([](TWeakObjectPtr<APoolableClassTest> Actor)
+		{
+			return !Actor.IsValid();
+		});
+
+	if (PoolableArray.IsEmpty())
+		return;
+		
+	PoolObject->ReturnToPool(PoolableArray[FMath::RandRange(0, PoolableArray.Num() - 1)].Get());
 }
 

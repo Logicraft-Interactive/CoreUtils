@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "PoolSettings.h"
+#include "Poolable.h"
 #include "PoolSubsystem.generated.h"
 
 
@@ -27,6 +28,9 @@ class LOGICRAFTCOREUTILS_API UPoolSubsystem : public UWorldSubsystem
 
 public:
 
-	UFUNCTION(Blueprintable)
+	UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Pool Object"))
 	UPoolObject* CreatePool(FPoolSettings PoolSettings);
-};
+	
+	UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Pool Object"))
+	UPoolObject* CreatePoolFromDataAsset(UPARAM(meta = (MustImplement = "Poolable")) UClass* SpawnClass, UPoolSettingsDataAsset* PoolSettings);
+}; 

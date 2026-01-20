@@ -42,6 +42,12 @@ public class LogicraftCoreUtils : ModuleRules
 			}
 			);
 		
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] {
+				"UnrealEd" // Required for GEditor and GetEditorWorldContext
+			});
+		}
 		
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]

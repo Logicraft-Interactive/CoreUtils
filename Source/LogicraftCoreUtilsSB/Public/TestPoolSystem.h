@@ -11,7 +11,8 @@
 class UPoolObject;
 
 UCLASS()
-class APoolableClassTest : public AActor, public IPoolable
+class
+APoolableClassTest : public AActor, public IPoolable
 {
 public:
 	virtual void OnReturn_Implementation() override;
@@ -44,8 +45,14 @@ protected:
 	UPROPERTY(Transient)
 	UPoolObject* PoolObject;
 
-	FTimerHolder TimerHolder;
+	FTimerHolder SpawnHolder;
+	FTimerHolder ReturnHolder;
+
+	TArray<TWeakObjectPtr<APoolableClassTest>> PoolableArray;
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	void Spawn();
+	void Return();
 };
