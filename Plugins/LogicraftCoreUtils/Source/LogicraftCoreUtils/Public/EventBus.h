@@ -621,9 +621,9 @@ private:
 		{
 			if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to add a callback of a different type.")))
 			{
-				auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainer);
-				EventContainer->AddSubscriber();
-				return Callable(*EventContainer, Forward<TArgs>(Args)...);
+				auto& EventContainer = static_cast<FEventContainerType&>(BaseEventContainer.Get());
+				EventContainer.AddSubscriber();
+				return Callable(EventContainer, Forward<TArgs>(Args)...);
 			}
 			
 			return {};
