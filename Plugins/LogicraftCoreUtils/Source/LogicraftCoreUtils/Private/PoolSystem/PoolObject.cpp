@@ -17,7 +17,9 @@ void UPoolObject::AddNewChunk()
 	int InitialSize = PoolArray.Num();
 	for (int i = PoolArray.Num(); i < InitialSize + PoolSettings.MinPoolSize; ++i)
 	{
-		PoolArray.Add(FPoolableInfo{.Poolable = PoolSettings.WorldContext.Get()->SpawnActor<IPoolable>(PoolSettings.SpawnClass)});
+		FActorSpawnParameters SpawnParameters;
+		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		PoolArray.Add(FPoolableInfo{.Poolable = PoolSettings.WorldContext.Get()->SpawnActor<IPoolable>(PoolSettings.SpawnClass, SpawnParameters)});
 		SwitchActorState(GetActor(PoolArray[i].Poolable), ESwitchState::Deactivate);
 		IndexQueue.Enqueue(i);
 	}

@@ -90,6 +90,15 @@ bool FPoolSystemReuseTest::RunTest(const FString& Parameters)
  */
 bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
 {
+    auto GetTime = [](auto Func)
+    {
+        double StartTimeNative = FPlatformTime::Seconds();
+        Func();
+        double EndTimeNative = FPlatformTime::Seconds();
+        return EndTimeNative - StartTimeNative;
+    };
+
+    
     UWorld* World = GEditor ? GEditor->GetEditorWorldContext().World() : nullptr;
     if (!World) return false;
 
@@ -102,20 +111,26 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
     Settings.bAllowResize = true;
     Settings.WorldContext = World;
 
-    UPoolObject* Pool = PoolSubsystem->CreatePool(Settings);
+    UPoolObject* Pool = nullptr;
 
-    // --- BENCHMARK: Native SpawnActor ---
-    double StartTimeNative = FPlatformTime::Seconds();
+    double InitTime = GetTime([&]
+        {
+            Pool = PoolSubsystem->CreatePool(Settings);
+        });
+
+    // --- BENCHMARK: Native SpawnActor --- 
     TArray<AActor*> NativeActors;
     NativeActors.Reserve(BenchmarkCount);
 
-    for (int32 i = 0; i < BenchmarkCount; ++i)
+   
+    double DurationNative = GetTime([&]
     {
-        AActor* NewActor = World->SpawnActor<APoolableTestActor>(FVector::ZeroVector, FRotator::ZeroRotator);
-        NativeActors.Add(NewActor);
-    }
-    double EndTimeNative = FPlatformTime::Seconds();
-    double DurationNative = EndTimeNative - StartTimeNative;
+        for (int32 i = 0; i < BenchmarkCount; ++i)
+        {
+            AActor* NewActor = World->SpawnActor<APoolableTestActor>(FVector::ZeroVector, FRotator::ZeroRotator);
+            NativeActors.Add(NewActor);
+        } 
+    });
 
     // Cleanup Native Actors
     for (AActor* Act : NativeActors)
@@ -124,18 +139,23 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
     }
 
     // --- BENCHMARK: Pool Spawn ---
-    double StartTimePool = FPlatformTime::Seconds();
     TArray<AActor*> PoolActors;
     PoolActors.Reserve(BenchmarkCount);
-
-    for (int32 i = 0; i < BenchmarkCount; ++i)
+    
+    double DurationPool = GetTime([&]
     {
-        AActor* PooledActor = Pool->SpawnFromPool(FTransform::Identity);
-        PoolActors.Add(PooledActor);
-    }
-    double EndTimePool = FPlatformTime::Seconds();
-    double DurationPool = EndTimePool - StartTimePool;
+        for (int32 i = 0; i < BenchmarkCount; ++i)
+        {
+            AActor* PooledActor = Pool->SpawnFromPool(FTransform::Identity);
+            PoolActors.Add(PooledActor);
+        }
+    });
 
+    for (AActor* PoolActor : PoolActors)
+    {
+        PoolActor->Destroy();
+    }
+    
     // Log Results
     UE_LOG(LogTemp, Display, TEXT("Performance Test Results (%d iterations):"), BenchmarkCount);
     UE_LOG(LogTemp, Display, TEXT(" - Native Spawn: %f seconds"), DurationNative);
@@ -149,7 +169,7 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
     }
     else
     {
-        UE_LOG(LogTemp, Display, TEXT("SUCCESS: Pool is %.2fx faster than native spawn."), DurationNative / DurationPool);
+        UE_LOG(LogTemp, Display, TEXT("SUCCESS: Pool is %.2fx faster than native spawn with a init time of %f seconds."), DurationNative / DurationPool, InitTime);
     }
 
     return true;

@@ -39,4 +39,3 @@ UPoolObject* UPoolSubsystem::CreatePoolFromDataAsset(UClass* SpawnClass, UPoolSe
 
 	return NewPoolObject;
 }
- 
