@@ -20,6 +20,7 @@ void UPoolObject::AddNewChunk()
 		FActorSpawnParameters SpawnParameters;
 		SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		PoolArray.Add(FPoolableInfo{.Poolable = PoolSettings.WorldContext.Get()->SpawnActor<IPoolable>(PoolSettings.SpawnClass, SpawnParameters)});
+		PoolArray[i].Poolable->Internal_SetIndex(i);
 		SwitchActorState(GetActor(PoolArray[i].Poolable), ESwitchState::Deactivate);
 		IndexQueue.Enqueue(i);
 	}
@@ -44,7 +45,7 @@ IPoolable* UPoolObject::SpawnActor(const FTransform& SpawnTransform)
 {
 	auto& [Poolable, bIsFree, ReturnTime] = PoolArray[*NextIndex];
 	bIsFree = false;
-	if (!ensureMsgf(Poolable && Poolable->_getUObject()->IsValidLowLevel(), TEXT("Selected pool actor is null!")))
+	if (!ensureMsgf(Poolable && IsValid(Poolable->_getUObject()), TEXT("Selected pool actor is null!")))
 	{
 		return nullptr;
 	}
@@ -71,7 +72,7 @@ void UPoolObject::ReturnActor(int Index)
 	bIsFree = true;
 	ReturnTime = 0.f; 
 	
-	if (!ensureMsgf(Poolable && Poolable->_getUObject()->IsValidLowLevel(), TEXT("Selected pool actor is null!")))
+	if (!ensureMsgf(Poolable && IsValid(Poolable->_getUObject()), TEXT("Selected pool actor is null!")))
 	{
 		return;
 	}
@@ -107,30 +108,39 @@ void UPoolObject::ShrinkRoutine()
 	
 	for (int i = 0; i < PoolArray.Num(); ++i)
 	{
-		if (PoolArray.Num() <= PoolSettings.MinPoolSize)
-		{
-			break;
-		}
 		FPoolableInfo& PoolableInfo = PoolArray[i];
-
-		if (!PoolableInfo.bIsFree)
-			continue;
-		
 		PoolableInfo.ReturnTime += PoolSettings.AutoShrinkUpdateTime;
 
-		if (PoolableInfo.ReturnTime >= PoolSettings.ShrinkObjectAfterReturnTime)
+		const bool bCanShrinkSize = PoolArray.Num() > PoolSettings.MinPoolSize;
+		const bool bIsTooOld = PoolableInfo.ReturnTime >= PoolSettings.ShrinkObjectAfterReturnTime && PoolableInfo.bIsFree;
+		
+		if (bCanShrinkSize && bIsTooOld)
 		{
-			GetActor(PoolArray[i].Poolable)->Destroy();
-			PoolArray.RemoveAtSwap(i--);
-		}		
-	}
+			AActor* ActorToDestroy = GetActor(PoolableInfo.Poolable);
+			if (IsValid(ActorToDestroy))
+			{
+				ActorToDestroy->Destroy();
+			}
 
-	for (int i = 0; i < PoolArray.Num(); ++i)
-	{
-		if (PoolArray[i].bIsFree)
+			PoolArray.RemoveAtSwap(i);
+			i--;
+		}
+		else
+		{
 			IndexQueue.Enqueue(i);
+			PoolArray[i].Poolable->Internal_SetIndex(i);
+		}
 	}
 	FindNextIndex();
+}
+
+void UPoolObject::BeginDestroy()
+{
+	for (auto Element : PoolArray)
+	{
+		GetActor(Element.Poolable)->Destroy();
+	}
+	Super::BeginDestroy();
 }
 
 void UPoolObject::SetupPoolObject(const FPoolSettings& InPoolSettings)
@@ -185,24 +195,22 @@ bool UPoolObject::CanSpawn() const
 	return PoolSettings.bAllowResize;
 }
 
-void UPoolObject::ReturnToPool(AActor* Poolable)
+void UPoolObject::ReturnToPool(AActor* PoolableActor)
 {
-	if (!Poolable || !Poolable->Implements<UPoolable>())
+	if (!PoolableActor || !PoolableActor->Implements<UPoolable>())
 	{
 		return;
 	}
-	auto FindPredicate = [=](const FPoolableInfo& PoolableInfo)
-	{
-		return PoolableInfo.Poolable == Poolable->GetInterfaceAddress(UPoolable::StaticClass());
-	};
 	
-	if (!ensureMsgf(
-		PoolArray.ContainsByPredicate(FindPredicate),
+	IPoolable* Poolable = Cast<IPoolable>(PoolableActor);
+
+	
+	if (!ensureMsgf(IsValid(Poolable->_getUObject()),
 		TEXT("This poolable object is not from this pool!")))
 	{
 		return;
 	}
  
-	ReturnActor(PoolArray.IndexOfByPredicate(FindPredicate));
+	ReturnActor(Poolable->Internal_GetIndex());
 }
  

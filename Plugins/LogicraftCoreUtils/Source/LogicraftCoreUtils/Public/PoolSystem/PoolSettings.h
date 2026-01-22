@@ -17,22 +17,22 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
 	 
 	TSubclassOf<AActor> SpawnClass;
 	 
-	TWeakObjectPtr<UWorld> WorldContext = nullptr;
+	TWeakObjectPtr<UWorld> WorldContext{nullptr};
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	bool bAllowResize = true;
+	bool bAllowResize{true};
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	bool bAutoShrink = true;
+	bool bAutoShrink{true};
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	int MinPoolSize = 30;
+	int MinPoolSize{30};
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	float AutoShrinkUpdateTime = 15.f;
+	float AutoShrinkUpdateTime{15.f};
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	float ShrinkObjectAfterReturnTime = 30.f;
+	float ShrinkObjectAfterReturnTime{30.f};
 };
  
 UCLASS(Blueprintable, BlueprintType)
@@ -41,18 +41,6 @@ class UPoolSettingsDataAsset : public UPrimaryDataAsset
 	GENERATED_BODY()
 public: 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	bool bAllowResize = true;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	bool bAutoShrink = true;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	int MinPoolSize = 30;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
-	float AutoShrinkUpdateTime = 15.f;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
-	float ShrinkObjectAfterReturnTime = 30.f;
+	FPoolSettings PoolSettings;
 	
 };

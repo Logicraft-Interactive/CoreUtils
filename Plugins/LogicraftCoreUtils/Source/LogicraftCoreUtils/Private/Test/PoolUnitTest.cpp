@@ -10,7 +10,7 @@
 #include "PoolSystem/PoolObject.h"
 #include "PoolSystem/PoolSettings.h"
 #include "PoolSystem/Poolable.h"
-#include "LinqCustomObject.h"
+#include "Test/PoolableTestActor.h"
 
 // --- TEST CONSTANTS ---
 static const int32 BenchmarkCount = 100000;

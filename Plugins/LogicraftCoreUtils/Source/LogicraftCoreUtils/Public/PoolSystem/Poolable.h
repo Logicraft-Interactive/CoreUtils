@@ -6,6 +6,7 @@
 #include "UObject/Interface.h"
 #include "Poolable.generated.h"
 
+class UPoolObject;
 // This class does not need to be modified.
 UINTERFACE()
 class UPoolable : public UInterface
@@ -20,8 +21,13 @@ class LOGICRAFTCOREUTILS_API IPoolable
 {
 	GENERATED_BODY()
 
+	int Index{0};
+	
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+	int Internal_GetIndex() const;
+	void Internal_SetIndex(const int NewIndex);
+	
 
 	UFUNCTION(BlueprintNativeEvent)
 	void OnSpawn();

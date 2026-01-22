@@ -20,9 +20,9 @@ class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 
 	struct FPoolableInfo
 	{
-		IPoolable* Poolable = nullptr;
-		bool bIsFree = true;
-		float ReturnTime = 0.f;
+		IPoolable* Poolable{nullptr};
+		bool bIsFree{true};
+		float ReturnTime{0.f}; 
 	};
 
 	enum class ESwitchState
@@ -33,7 +33,7 @@ class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 	
 	FPoolSettings PoolSettings;
 	TArray<FPoolableInfo> PoolArray;
-	TOptional<int> NextIndex = NullOpt;
+	TOptional<int> NextIndex{NullOpt};
 	FTimerHolder ShrinkRoutineTimer;
 
 	static AActor* GetActor(const IPoolable* Poolable);
@@ -50,6 +50,8 @@ class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 	void ShrinkRoutine();
 
 	TQueue<int> IndexQueue;
+
+	virtual void BeginDestroy() override;
 	
 public:	
 	void SetupPoolObject(const FPoolSettings& InPoolSettings);
@@ -67,6 +69,6 @@ public:
 	bool CanSpawn() const;
 
 	UFUNCTION(BlueprintCallable)
-	void ReturnToPool(AActor* Poolable);
+	void ReturnToPool(AActor* PoolableActor);
 	
 };
