@@ -597,6 +597,9 @@ public:
 	}
 	
 private:
+	/**
+	 * This function exist to avoid doing an "if" everytime a context need to be checked.
+	 */
 	template<typename TCallable, typename ...TArgs>
 		requires std::invocable<TCallable, ThisClass*, TArgs...>
 	static auto Internal_ExecuteOnValidContext(const UObject* WorldContext, TCallable&& Callable, TArgs&&... Args)
@@ -610,7 +613,11 @@ private:
 
 		return ReturnType{};
 	}
-	
+
+	/**
+	 * This function exist to avoid doing the same thing over and over again since only two lines change between call.
+	 * To handle this two lines of code that changed I use a functor.
+	 */
 	template<typename TContainerArgs, typename TCallable, typename ...TArgs>
 		requires std::invocable<TCallable, EventBus::TypeTraits::TContainerTypeFor<TContainerArgs>&, TArgs...>
 	FDelegateHandle Internal_AddCallback(const FGameplayTag& GameplayTag, TCallable&& Callable, TArgs&&... Args)

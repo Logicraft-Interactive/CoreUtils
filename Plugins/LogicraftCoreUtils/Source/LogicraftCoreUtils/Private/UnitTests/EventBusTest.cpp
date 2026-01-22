@@ -14,7 +14,7 @@ BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.Core.EventBus", EAutomationTestFlags
     FGameplayTag TestTag;
 END_DEFINE_SPEC(FEventBusSpec)
 
-UE_DEFINE_GAMEPLAY_TAG_COMMENT(Test_Event_Bus, "Test.Event.Bus", "Tag pour le bus d'événement de test");
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(Test_Event_Bus, "Test.Event.Bus", "Tag for event bus testing.");
 
 void FEventBusSpec::Define()
 {
