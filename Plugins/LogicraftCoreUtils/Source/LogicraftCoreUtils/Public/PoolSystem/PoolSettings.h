@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
+#include "Engine/DataAsset.h"
 #include "PoolSettings.generated.h"
 
 class UPoolable;
@@ -15,6 +16,7 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
 {
 	GENERATED_BODY()
 	 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (MustImplement = "Poolable"))	
 	TSubclassOf<AActor> SpawnClass;
 	 
 	TWeakObjectPtr<UWorld> WorldContext{nullptr};
@@ -36,7 +38,7 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
 };
  
 UCLASS(Blueprintable, BlueprintType)
-class UPoolSettingsDataAsset : public UPrimaryDataAsset
+class LOGICRAFTCOREUTILS_API UPoolSettingsDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public: 	

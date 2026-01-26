@@ -4,6 +4,7 @@
 #include "PoolSystem/PoolObject.h"
 
 #include "PoolSystem/Poolable.h"
+#include "Engine/World.h"
 
 AActor* UPoolObject::GetActor(const IPoolable* Poolable)
 {
@@ -172,7 +173,8 @@ AActor* UPoolObject::SpawnFromPool(const FTransform& SpawnTransform)
 	{
 		if (!PoolSettings.bAllowResize)
 		{
-			checkf(false, TEXT("Pool capacity exceeds!"))
+			checkf(false, TEXT("Pool capacity exceeded and resize is disabled for this pool. Returning nullptr."));
+			return nullptr;
 		}
 		else
 		{
@@ -187,12 +189,33 @@ AActor* UPoolObject::SpawnFromPool(const FTransform& SpawnTransform)
 		return nullptr;
 	}
 	
-	return static_cast<AActor*>(SpawnActor(SpawnTransform)->_getUObject());
+	IPoolable* SpawnedPoolable = SpawnActor(SpawnTransform);
+	if (!ensureMsgf(SpawnedPoolable, TEXT("Failed to spawn actor from pool!")))
+	{
+		return nullptr;
+	}
+	return GetActor(SpawnedPoolable);
 }
 
 bool UPoolObject::CanSpawn() const
 {
-	return PoolSettings.bAllowResize;
+	if (!PoolSettings.WorldContext.IsValid())
+	{
+		return false;
+	}
+	if (PoolSettings.bAllowResize)
+	{
+		return true;
+	}
+	if (NextIndex)
+	{
+		return true;
+	}
+	if (!IndexQueue.IsEmpty())
+	{
+		return true;
+	}
+	return false;
 }
 
 void UPoolObject::ReturnToPool(AActor* PoolableActor)
@@ -204,13 +227,14 @@ void UPoolObject::ReturnToPool(AActor* PoolableActor)
 	
 	IPoolable* Poolable = Cast<IPoolable>(PoolableActor);
 
-	
-	if (!ensureMsgf(IsValid(Poolable->_getUObject()),
-		TEXT("This poolable object is not from this pool!")))
+	const int32 Index = Poolable ? Poolable->Internal_GetIndex() : INDEX_NONE;
+	if (!ensureMsgf(Poolable && PoolArray.IsValidIndex(Index) && PoolArray[Index].Poolable == Poolable,
+	TEXT("Attempted to return a poolable that does not belong to this pool or has an invalid index (Index: %d)."), Index))
 	{
 		return;
 	}
- 
-	ReturnActor(Poolable->Internal_GetIndex());
+
+	
+	ReturnActor(Index);
 }
  

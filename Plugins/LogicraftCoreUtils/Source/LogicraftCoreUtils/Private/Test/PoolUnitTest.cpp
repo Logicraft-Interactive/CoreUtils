@@ -153,7 +153,7 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
 
     for (AActor* PoolActor : PoolActors)
     {
-        PoolActor->Destroy();
+        Pool->ReturnToPool(PoolActor);
     }
     
     // Log Results

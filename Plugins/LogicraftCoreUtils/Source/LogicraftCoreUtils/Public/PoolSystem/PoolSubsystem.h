@@ -32,5 +32,5 @@ public:
 	UPoolObject* CreatePool(FPoolSettings PoolSettings);
 	
 	UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Pool Object"))
-	UPoolObject* CreatePoolFromDataAsset(UPARAM(meta = (MustImplement = "Poolable")) UClass* SpawnClass, UPoolSettingsDataAsset* PoolSettings);
+	UPoolObject* CreatePoolFromDataAsset(UPoolSettingsDataAsset* PoolSettings);
 }; 

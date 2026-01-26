@@ -7,7 +7,7 @@
 #include "Poolable.generated.h"
 
 class UPoolObject;
-// This class does not need to be modified.
+
 UINTERFACE(BlueprintType)
 class LOGICRAFTCOREUTILS_API UPoolable : public UInterface
 {
