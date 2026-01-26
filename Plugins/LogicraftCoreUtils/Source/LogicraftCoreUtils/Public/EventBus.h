@@ -186,7 +186,7 @@ namespace EventBus
 	namespace Concepts
 	{
 		template<typename Type>
-		concept IsMulticastDelegate = TypeTraits::bIsMulticastDelegate_V<Type>;
+		concept IsMulticastDelegate = TypeTraits::bIsMulticastDelegate_V<typename TRemoveReference<Type>::Type>;
 
 		template<typename TFunctor>
 		concept IsFunctor =
@@ -315,7 +315,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag]<typename TInDelegate>(ThisClass* EventBus, TInDelegate&& InDelegate)
 		{
-			return EventBus->Internal_AddCallback<TDelegate>(GameplayTag,
+			return EventBus->Internal_AddCallback<TRemoveReference<TDelegate>::Type>(GameplayTag,
 			[]<typename TCallbackDelegate>(auto& EventContainer, TCallbackDelegate&& CallbackDelegate)
 			{
 				return EventContainer.MulticastDelegate.Add(Forward<TCallbackDelegate>(CallbackDelegate));
@@ -520,12 +520,7 @@ public:
 			{
 				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
 				const auto ActualTypeId = BaseEventContainer->GetTypeID();
-				if (ensureMsgf(
-					ActualTypeId == ExpectedTypeId,
-					TEXT("Unable to broadcast event for tag '%s': type mismatch. Expected TypeID=%llu, Actual TypeID=%llu."),
-					*GameplayTag.ToString(),
-					static_cast<unsigned long long>(ExpectedTypeId),
-					static_cast<unsigned long long>(ActualTypeId)))
+				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to add a callback of a different type.")))
 				{
 					auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainer);
 					EventContainer->MulticastDelegate.Broadcast(Forward<TInArgs>(InArgs)...);
@@ -631,7 +626,9 @@ private:
 		
 		if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 		{
-			if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to add a callback of a different type.")))
+			const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
+			const auto ActualTypeId = BaseEventContainer->GetTypeID();
+			if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to add a callback of a different type.")))
 			{
 				auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
 				const FDelegateHandle DelegateHandle{ Callable(EventContainer, Forward<TArgs>(Args)...) };

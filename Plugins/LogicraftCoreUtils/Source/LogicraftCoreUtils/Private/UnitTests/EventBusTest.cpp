@@ -97,6 +97,9 @@ void FEventBusSpec::Define()
             int32 CallCount = 0;
             FDelegateHandle Handle = UEventBus::AddLambda(TestWorld, TestTag, [&](int32) { CallCount++; });
 
+            TMulticastDelegate<void(int32)> a;
+            UEventBus::Add(TestWorld, TestTag, a);
+            
             UEventBus::Broadcast(TestWorld, TestTag, 1);
             UEventBus::Remove(TestWorld, TestTag, Handle);
             UEventBus::Broadcast(TestWorld, TestTag, 2);

@@ -68,7 +68,7 @@ bool UEventBus::IsBound(const UObject* WorldContext, const FGameplayTag& Gamepla
 	return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](const ThisClass* EventBus)
 	{
 		const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) };
-		return BaseEventContainer ? BaseEventContainer->GetSubscriberCount() > 0U : false;	
+		return BaseEventContainer ? BaseEventContainer->GetSubscriberCount() > 0 : false;	
 	});
 }
 
