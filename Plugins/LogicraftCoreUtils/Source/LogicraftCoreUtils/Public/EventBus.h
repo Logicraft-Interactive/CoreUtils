@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Chain.h"
 #include "GameplayTagContainer.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "EventBus.generated.h"
@@ -580,11 +579,6 @@ public:
 	static bool IsArgsType(const UObject* WorldContext, const FGameplayTag& GameplayTag)
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
-
-		Internal_ExecuteOnValidContext(WorldContext, [](const ThisClass* EventBus)
-		{
-			return;
-		});
 		
 		return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](const ThisClass* EventBus)
 		{
@@ -633,22 +627,33 @@ private:
 			if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to add a callback of a different type.")))
 			{
 				auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
-				EventContainer.AddSubscriber();
-				return Callable(EventContainer, Forward<TArgs>(Args)...);
+				const FDelegateHandle DelegateHandle{ Callable(EventContainer, Forward<TArgs>(Args)...) };
+
+				if (DelegateHandle.IsValid())
+				{
+					EventContainer.AddSubscriber();
+					return DelegateHandle;
+				}
 			}
 			
 			return {};
 		}
+
+		FEventContainerType& EventContainer{ Internal_AddActiveEvent<FEventContainerType>(GameplayTag) };
+		const FDelegateHandle DelegateHandle{ Callable(EventContainer, Forward<TArgs>(Args)...) };
+		if (!DelegateHandle.IsValid())
+		{
+			return {};
+		}
 		
-		return Callable(Internal_AddActiveEvent<FEventContainerType>(GameplayTag), Forward<TArgs>(Args)...);
+		EventContainer.AddSubscriber();
+		return DelegateHandle;
 	}
 
 	template<typename TEventContainerType>
 	TEventContainerType& Internal_AddActiveEvent(const FGameplayTag& GameplayTag)
 	{
-		auto& EventContainer{ static_cast<TEventContainerType&>(ActiveEvents.Add(GameplayTag, MakeShared<TEventContainerType>()).Get()) };
-		EventContainer.AddSubscriber();
-		return EventContainer;
+		return static_cast<TEventContainerType&>(ActiveEvents.Add(GameplayTag, MakeShared<TEventContainerType>()).Get());
 	}
 
 	TSharedPtr<IEventContainerBase> Internal_Find(const FGameplayTag& GameplayTag) const;
