@@ -1,0 +1,9 @@
+{
+	"id": "Pool",
+	"name": "Pool",
+	"enabledTests": [
+		"Project.PoolSystem.Capacity",
+		"Project.PoolSystem.Performance",
+		"Project.PoolSystem.Reuse"
+	]
+}

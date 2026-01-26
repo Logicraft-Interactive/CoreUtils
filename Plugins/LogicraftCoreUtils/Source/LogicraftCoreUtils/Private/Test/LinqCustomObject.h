@@ -14,3 +14,4 @@ class LOGICRAFTCOREUTILS_API ULinqCustomObject : public UObject
 {
 	GENERATED_BODY()
 };
+
