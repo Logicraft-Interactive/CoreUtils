@@ -8,8 +8,6 @@
 #include "Subsystems/WorldSubsystem.h"
 #include "EventBus.generated.h"
 
-DECLARE_MULTICAST_DELEGATE(TestDelegate)
-
 namespace TypeTraits
 {
 	template<typename ...TArgs>
