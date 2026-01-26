@@ -26,6 +26,11 @@ UPoolObject* UPoolSubsystem::CreatePool(FPoolSettings PoolSettings)
 
 UPoolObject* UPoolSubsystem::CreatePoolFromDataAsset(UClass* SpawnClass, UPoolSettingsDataAsset* PoolSettings)
 {
+	if (!PoolSettings)
+	{
+		ensureMsgf(false, TEXT("UPoolSubsystem::CreatePoolFromDataAsset called with null PoolSettings data asset."));
+		return nullptr;
+	}
 	FPoolSettings NewPoolSettings = PoolSettings->PoolSettings;
 	NewPoolSettings.SpawnClass = SpawnClass;
 	NewPoolSettings.WorldContext = GetWorld();
