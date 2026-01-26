@@ -518,7 +518,14 @@ public:
 		{
 			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 			{
-				if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to broadcast a callback of a different type.")))
+				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
+				const auto ActualTypeId = BaseEventContainer->GetTypeID();
+				if (ensureMsgf(
+					ActualTypeId == ExpectedTypeId,
+					TEXT("Unable to broadcast event for tag '%s': type mismatch. Expected TypeID=%llu, Actual TypeID=%llu."),
+					*GameplayTag.ToString(),
+					static_cast<unsigned long long>(ExpectedTypeId),
+					static_cast<unsigned long long>(ActualTypeId)))
 				{
 					auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainer);
 					EventContainer->MulticastDelegate.Broadcast(Forward<TInArgs>(InArgs)...);
