@@ -8,8 +8,8 @@
 
 class UPoolObject;
 // This class does not need to be modified.
-UINTERFACE()
-class UPoolable : public UInterface
+UINTERFACE(BlueprintType)
+class LOGICRAFTCOREUTILS_API UPoolable : public UInterface
 {
 	GENERATED_BODY()
 };
