@@ -9,12 +9,12 @@
 
 void APoolableClassTest::OnReturn_Implementation()
 {
-	UE_LOG(LogTemp, Error, TEXT("Actor Returned"));
+	UE_LOG(LogTemp, Log, TEXT("Actor Returned"));
 }
 
 void APoolableClassTest::OnSpawn_Implementation()
 {
-	UE_LOG(LogTemp, Error, TEXT("Actor Spawned"));	
+	UE_LOG(LogTemp, Log, TEXT("Actor Spawned"));	
 }
 
 // Sets default values
