@@ -34,7 +34,7 @@ namespace TypeTraits
 		using FArgsType = TArgsTrait<TArgs...>::FArgs;
 
 		template<size_t Index>
-		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>;
+		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>::Type;
 
 		using FFunctionType = TReturn (TClass::*)(TArgs...);
 	};
@@ -50,7 +50,7 @@ namespace TypeTraits
 		using FArgsType = TArgsTrait<TArgs...>::FArgs;
 
 		template<size_t Index>
-		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>;
+		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>::Type;
 
 		using FFunctionType = TReturn (TClass::*)(TArgs...) const;
 	};
@@ -65,7 +65,7 @@ namespace TypeTraits
 		using FArgsType = TArgsTrait<TArgs...>::FArgs;
 
 		template<size_t Index>
-		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>;
+		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>::Type;
 
 		using FFunctionType = TReturn (*)(TArgs...);
 	};
@@ -83,16 +83,15 @@ struct IEventContainerBase
 	virtual bool IsBound() const = 0;
 	virtual bool IsBoundToObject(const void* UserObject) const = 0;
 
-	virtual uint32 AddSubscriber() = 0;
-	virtual uint32 RemoveSubscriber() = 0;
-	virtual void SetSubscriberCount(const uint32 NewSubscriberCount) = 0;
-	virtual uint32 GetSubscriberCount() const = 0;
+	virtual int32 AddSubscriber() = 0;
+	virtual int32 RemoveSubscriber() = 0;
+	virtual int32 GetSubscriberCount() const = 0;
 };
 
 template<typename ...Args>
 struct TEventContainer final : IEventContainerBase
 {
-	uint32 SubscriberCount{ 0 };
+	int32 SubscriberCount{ 0 };
 	TMulticastDelegate<void(Args...)> MulticastDelegate;
 
 	static const void* StaticGetTypeID()
@@ -119,15 +118,14 @@ struct TEventContainer final : IEventContainerBase
 		const int32 RemovedSubscriber{ MulticastDelegate.RemoveAll(UserObject) };
 		SubscriberCount -= RemovedSubscriber;
 		return RemovedSubscriber;
-	}
+	}	
 	
 	virtual bool IsBound() const override { return MulticastDelegate.IsBound(); }
 	virtual bool IsBoundToObject(const void* UserObject) const override { return MulticastDelegate.IsBoundToObject(UserObject); }
 	
-	virtual uint32 AddSubscriber() override { return ++SubscriberCount; }
-	virtual uint32 RemoveSubscriber() override { return --SubscriberCount; }
-	virtual uint32 GetSubscriberCount() const override { return SubscriberCount; }
-	virtual void SetSubscriberCount(const uint32 NewSubscriberCount) override { SubscriberCount = NewSubscriberCount; }
+	virtual int32 AddSubscriber() override { return ++SubscriberCount; }
+	virtual int32 RemoveSubscriber() override { return --SubscriberCount; }
+	virtual int32 GetSubscriberCount() const override { return SubscriberCount; }
 };
 
 namespace EventBus
@@ -321,7 +319,7 @@ public:
 			return EventBus->Internal_AddCallback<TDelegate>(GameplayTag,
 			[]<typename TCallbackDelegate>(auto& EventContainer, TCallbackDelegate&& CallbackDelegate)
 			{
-				EventContainer.MulticastDelegate.Add(Forward<TCallbackDelegate>(CallbackDelegate));
+				return EventContainer.MulticastDelegate.Add(Forward<TCallbackDelegate>(CallbackDelegate));
 			},
 			Forward<TInDelegate>(InDelegate));
 		},
@@ -488,7 +486,7 @@ public:
 	 * @param   Function	 Function pointer
 	 */
 	template<typename TFunction>
-		requires std::is_function_v<TFunction>
+		requires !TypeTraits::TFunctionTraits<TFunction>::bIsClass
 	static FDelegateHandle AddStatic(const UObject* WorldContext, const FGameplayTag& GameplayTag, TFunction Function)
 	{
 		return Internal_ExecuteOnValidContext(WorldContext,
@@ -583,6 +581,11 @@ public:
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
 
+		Internal_ExecuteOnValidContext(WorldContext, [](const ThisClass* EventBus)
+		{
+			return;
+		});
+		
 		return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](const ThisClass* EventBus)
 		{
 			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
@@ -608,8 +611,11 @@ private:
 		{
 			return Callable(EventBus, Forward<TArgs>(Args)...);
 		}
-
-		return ReturnType{};
+		
+		if constexpr (!std::is_void_v<ReturnType>)
+		{
+			return ReturnType{};
+		}
 	}
 
 	/**
@@ -626,7 +632,7 @@ private:
 		{
 			if (ensureMsgf(BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID(), TEXT("Unable to add a callback of a different type.")))
 			{
-				auto& EventContainer = static_cast<FEventContainerType&>(BaseEventContainer.Get());
+				auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
 				EventContainer.AddSubscriber();
 				return Callable(EventContainer, Forward<TArgs>(Args)...);
 			}

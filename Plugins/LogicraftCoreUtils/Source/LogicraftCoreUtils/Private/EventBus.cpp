@@ -51,7 +51,6 @@ int32 UEventBus::RemoveAll(const UObject* WorldContext, const FGameplayTag& Game
 		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 		{
 			const int32 RemovedSubscriber{ BaseEventContainer->RemoveAll(UserObject) };
-			BaseEventContainer->SetSubscriberCount(BaseEventContainer->GetSubscriberCount() - RemovedSubscriber);
 			if (BaseEventContainer->GetSubscriberCount() == 0)
 			{
 				EventBus->Internal_Remove(GameplayTag);
