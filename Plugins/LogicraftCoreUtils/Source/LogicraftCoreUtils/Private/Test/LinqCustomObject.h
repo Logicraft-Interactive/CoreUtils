@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "PoolSystem/Poolable.h"
 #include "UObject/Object.h"
 #include "LinqCustomObject.generated.h"
 
