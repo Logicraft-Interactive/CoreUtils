@@ -6,6 +6,7 @@
 #include "GameplayTagContainer.h"
 #include "NativeGameplayTags.h"
 #include "Engine/World.h"
+#include "Engine/Engine.h"
 #include "Misc/AutomationTest.h"
 
 BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.Core.EventBus", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
