@@ -96,9 +96,6 @@ void FEventBusSpec::Define()
         {
             int32 CallCount = 0;
             FDelegateHandle Handle = UEventBus::AddLambda(TestWorld, TestTag, [&](int32) { CallCount++; });
-
-            TMulticastDelegate<void(int32)> a;
-            UEventBus::Add(TestWorld, TestTag, a);
             
             UEventBus::Broadcast(TestWorld, TestTag, 1);
             UEventBus::Remove(TestWorld, TestTag, Handle);
@@ -140,7 +137,7 @@ void FEventBusSpec::Define()
             TestFalse("Should be unbound after self-removal (if it was the only one, strictly checking specific handle)", UEventBus::IsBoundToObject(TestWorld, TestTag, &Helper.Get()));
         });
     });
-
+    
     //This test does work but since I'm using ensureMsgf AddExpectedError doesn't work and still fail the test.
     // Describe("Safety", [this]()
     // {

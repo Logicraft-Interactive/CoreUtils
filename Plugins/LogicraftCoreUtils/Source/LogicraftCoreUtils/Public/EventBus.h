@@ -153,13 +153,13 @@ namespace EventBus
 		constexpr static bool TIsFunctor_V = TIsFunctor<TMemberFunction, TArgs...>::bValue;
 
 		template<typename>
-		struct TIsMulticastDelegate : std::false_type {};
+		struct TIsDelegate : std::false_type {};
 
 		template<typename TReturn, typename ...TArgs>
-		struct TIsMulticastDelegate<TMulticastDelegate<TReturn(TArgs...)>> : std::true_type {};
+		struct TIsDelegate<TDelegate<TReturn(TArgs...)>> : std::true_type {};
 
 		template<typename Type>
-		constexpr static bool bIsMulticastDelegate_V = TIsMulticastDelegate<Type>::value;
+		constexpr static bool bIsDelegate_V = TIsDelegate<Type>::value;
 
 		template<typename ...TArgs>
 		struct FContainerTypeFor
@@ -174,7 +174,7 @@ namespace EventBus
 		};
 
 		template<typename ...TArgs>
-		struct FContainerTypeFor<TMulticastDelegate<void(TArgs...)>>
+		struct FContainerTypeFor<TDelegate<void(TArgs...)>>
 		{
 			using FType = TEventContainer<TArgs...>;
 		};
@@ -186,7 +186,7 @@ namespace EventBus
 	namespace Concepts
 	{
 		template<typename Type>
-		concept IsMulticastDelegate = TypeTraits::bIsMulticastDelegate_V<typename TRemoveReference<Type>::Type>;
+		concept IsDelegate = TypeTraits::bIsDelegate_V<typename TRemoveReference<Type>::Type>;
 
 		template<typename TFunctor>
 		concept IsFunctor =
@@ -309,7 +309,7 @@ public:
 	 * @param   GameplayTag  Associated gameplay tag.
 	 * @param   Delegate	 The delegate to add.
 	 */
-	template<EventBus::Concepts::IsMulticastDelegate TDelegate>
+	template<EventBus::Concepts::IsDelegate TDelegate>
 	static FDelegateHandle Add(const UObject* WorldContext, const FGameplayTag& GameplayTag, TDelegate&& Delegate)
 	{
 		return Internal_ExecuteOnValidContext(WorldContext,
