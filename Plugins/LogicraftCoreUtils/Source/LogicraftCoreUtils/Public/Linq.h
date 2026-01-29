@@ -56,26 +56,52 @@ namespace Linq
 		
 		// Base interface for all LINQ iterators.
 		// Follows a pull-based iterator pattern (Next -> GetCurrent).
-		template <typename T>
+		template <typename Derived ,typename T>
 		class ILinqIterator
 		{
+			friend Derived;
+
+			bool Next_Implementation()
+			{
+				return false;
+			}
+
+			// Resets the iterator to the beginning.
+			void Reset_Implementation()
+			{
+			}
+
+			// Gets the current element in the iteration.
+			const T& GetCurrent_Implementation()
+			{
+				return T();
+			}
 		public:
 			virtual ~ILinqIterator() = default;
 
 			// Advances to the next element. Returns true if successful, false if end of collection.
-			virtual bool Next() = 0;
+			bool Next()
+			{
+				return static_cast<Derived>(*this).Next_Implementation();
+			}
 
 			// Resets the iterator to the beginning.
-			virtual void Reset() = 0;
+			void Reset()
+			{
+				static_cast<Derived>(*this).Reset_Implementation();
+			}
 
 			// Gets the current element in the iteration.
-			virtual const T& GetCurrent() = 0;
+			const T& GetCurrent()
+			{
+				return static_cast<Derived>(*this).GetCurrent_Implementation();
+			}
 		};
 
 		// Iterator for iterating over an existing TArray pointer (L-Value source).
 		// Does not own the memory of the array.
 		template <typename T>
-		class TLValueSourceIterator : public ILinqIterator<T>
+		class TLValueSourceIterator : public ILinqIterator<TLValueSourceIterator<T>,T>
 		{
 			using FCollectionType = const TArray<T>*;
 			FCollectionType Collection = nullptr;
@@ -87,17 +113,17 @@ namespace Linq
 			{
 			}
 
-			virtual bool Next() override
+			bool Next_Implementation()
 			{
 				return ++Current < Collection->Num();
 			}
 
-			virtual void Reset() override
+			void Reset_Implementation()
 			{
 				Current = -1;
 			}
 
-			virtual const T& GetCurrent() override
+			const T& GetCurrent_Implementation()
 			{
 				return (*Collection)[Current];
 			}
@@ -106,7 +132,7 @@ namespace Linq
 		// Iterator for iterating over a temporary TArray (R-Value source).
 		// Owns the memory of the array via MoveTemp.
 		template <typename T>
-		class TRValueSourceIterator : public ILinqIterator<T>
+		class TRValueSourceIterator : public ILinqIterator<TRValueSourceIterator<T>,T>
 		{
 			using FCollectionType = TArray<T> ;
 			FCollectionType Collection{};
@@ -118,17 +144,17 @@ namespace Linq
 			{
 			}
 
-			virtual bool Next() override
+			bool Next_Implementation()
 			{
 				return ++Current < Collection.Num();
 			}
 
-			virtual void Reset() override
+			void Reset_Implementation()
 			{
 				Current = -1;
 			}
 
-			virtual const T& GetCurrent() override
+			const T& GetCurrent_Implementation()
 			{
 				return Collection[Current];
 			}
@@ -136,7 +162,7 @@ namespace Linq
 
 		// Filters elements based on a predicate (Where clause).
 		template <typename T, typename Pred>
-		class TWhereIterator : public ILinqIterator<T>
+		class TWhereIterator : public ILinqIterator<TWhereIterator<T, Pred> ,T>
 		{
 			TUniquePtr<ILinqIterator<T>> Source = nullptr;
 			const T* CurrentValue = {};
