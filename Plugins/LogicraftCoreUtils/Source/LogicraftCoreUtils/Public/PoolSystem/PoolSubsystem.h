@@ -8,11 +8,9 @@
 #include "Poolable.h"
 #include "PoolSubsystem.generated.h"
 
-
 class UPoolObject;
 class IPoolable;
 
- 
 /**
  * 
  */
@@ -28,9 +26,9 @@ class LOGICRAFTCOREUTILS_API UPoolSubsystem : public UWorldSubsystem
 
 public:
 
-	UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Pool Object"))
+	UFUNCTION(BlueprintCallable, Category = "Pool|Subsystem", meta = (ReturnDisplayName = "Pool Object"))
 	UPoolObject* CreatePool(FPoolSettings PoolSettings);
 	
-	UFUNCTION(BlueprintCallable, meta = (ReturnDisplayName = "Pool Object"))
+	UFUNCTION(BlueprintCallable, Category = "Pool|Subsystem", meta = (ReturnDisplayName = "Pool Object"))
 	UPoolObject* CreatePoolFromDataAsset(UPoolSettingsDataAsset* PoolSettings);
 }; 

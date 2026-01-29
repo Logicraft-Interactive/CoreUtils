@@ -8,6 +8,7 @@
 #include "PoolSettings.generated.h"
 
 class UPoolable;
+
 /**
  * 
  */
@@ -16,24 +17,24 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
 {
 	GENERATED_BODY()
 	 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, meta = (MustImplement = "Poolable"))	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite, meta = (MustImplement = "Poolable"))	
 	TSubclassOf<AActor> SpawnClass;
 	 
 	TWeakObjectPtr<UWorld> WorldContext{nullptr};
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite)	
 	bool bAllowResize{true};
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite)
 	bool bAutoShrink{true};
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite)	
 	int MinPoolSize{30};
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite)	
 	float AutoShrinkUpdateTime{15.f};
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite)	
 	float ShrinkObjectAfterReturnTime{30.f};
 };
  
@@ -42,7 +43,7 @@ class LOGICRAFTCOREUTILS_API UPoolSettingsDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public: 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite)	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite)	
 	FPoolSettings PoolSettings;
 	
 };

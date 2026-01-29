@@ -1,15 +1,15 @@
 ﻿#include "CoreMinimal.h"
-#include "Misc/AutomationTest.h"
-#include "Tests/AutomationEditorCommon.h"
+
+#if WITH_EDITOR
+#include "Editor.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
-#include "Kismet/GameplayStatics.h"
+#include "Misc/AutomationTest.h"
 
 // Project Includes
-#include "PoolSystem/PoolSubsystem.h"
 #include "PoolSystem/PoolObject.h"
 #include "PoolSystem/PoolSettings.h"
-#include "PoolSystem/Poolable.h"
+#include "PoolSystem/PoolSubsystem.h"
 #include "Test/PoolableTestActor.h"
 
 // --- TEST CONSTANTS ---
@@ -230,3 +230,4 @@ bool FPoolSystemCapacityTest::RunTest(const FString& Parameters)
 
     return true;
 }
+#endif

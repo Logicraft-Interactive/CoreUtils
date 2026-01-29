@@ -4,6 +4,10 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
+
 #define TIMER_HOLDER_CHECK() \
 		checkf(TimerManager != nullptr, TEXT("The timer manager was not retrieved prior to using this function."))
 
@@ -70,8 +74,7 @@ bool FTimerHolder::RetrieveTimerManager()
 	{
 		return true;
 	}
-
-
+	
 	if (GEngine)
 	{
 		for (const FWorldContext& Context : GEngine->GetWorldContexts())
@@ -84,9 +87,7 @@ bool FTimerHolder::RetrieveTimerManager()
 		}
 	}
 	
-	
-		
-#ifdef UE_EDITOR
+#if WITH_EDITOR
 	if (!GEditor || !GEditor->GetEditorWorldContext().World())
 	{
 		return false;
