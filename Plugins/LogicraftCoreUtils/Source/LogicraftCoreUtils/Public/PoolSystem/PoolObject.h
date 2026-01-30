@@ -10,6 +10,7 @@
 #include "PoolObject.generated.h"
 
 class IPoolable;
+
 /**
  * 
  */
@@ -56,7 +57,7 @@ class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
 public:	
 	void SetupPoolObject(const FPoolSettings& InPoolSettings);
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Pool|Object")
 	AActor* SpawnFromPool(const FTransform& SpawnTransform);
 
 	template<typename T>
@@ -65,10 +66,10 @@ public:
 		return Cast<T>(SpawnFromPool(SpawnTransform));
 	}
 
-	UFUNCTION(BlueprintCallable, BlueprintPure)
+	UFUNCTION(BlueprintCallable, Category = "Pool|Object", BlueprintPure)
 	bool CanSpawn() const;
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Pool|Object")
 	void ReturnToPool(AActor* PoolableActor);
 	
 };
