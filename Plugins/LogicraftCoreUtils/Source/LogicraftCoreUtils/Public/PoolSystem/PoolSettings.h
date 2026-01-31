@@ -17,7 +17,7 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
 {
 	GENERATED_BODY()
 	 
-	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite, meta = (MustImplement = "Poolable"))	
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite, meta = (MustImplement = "/Script/LogicraftCoreUtils.Poolable"))
 	TSubclassOf<AActor> SpawnClass;
 	 
 	TWeakObjectPtr<UWorld> WorldContext{nullptr};
