@@ -15,7 +15,7 @@ UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
 	return nullptr;
 }
 
-void UEventBus::UnLockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag)
+void UEventBus::UnlockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag)
 {
 	Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](ThisClass* EventBus)
 	{

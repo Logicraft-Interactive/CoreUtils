@@ -87,8 +87,11 @@ void FEventBusSpec::Define()
             
             TestTrue("Types match", UEventBus::IsArgsType<int32, int32>(TestWorld, TestTag));
 
-            UEventBus::UnLockSignature(TestWorld, TestTag);
+            UEventBus::UnlockSignature(TestWorld, TestTag);
 
+            UEventBus::AddLambda(TestWorld, TestTag, [](float, float){});
+
+            TestTrue("Types match", UEventBus::IsArgsType<float, float>(TestWorld, TestTag));
             TestFalse("Types don't match", UEventBus::IsArgsType<int32, int32>(TestWorld, TestTag));
         });
 

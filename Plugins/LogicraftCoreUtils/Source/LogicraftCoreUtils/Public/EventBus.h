@@ -86,7 +86,7 @@ struct IEventContainerBase
 	virtual int32 RemoveSubscriber() = 0;
 	virtual int32 GetSubscriberCount() const = 0;
 
-	virtual void SetLockedSignature(bool LockedSignature) = 0;
+	virtual void SetLockedSignature(bool InLockedSignature) = 0;
 	virtual bool GetLockedSignature() const = 0;
 };
 
@@ -508,7 +508,8 @@ public:
 
 	/**
 	 * Lock a specific type signature.
-	 * This pre-associates types with gameplay tags, preventing any "add event" function from setting the signature.
+	 * This pre-associates types with gameplay tags and locks the signature of the current event container,
+	 * preventing subsequent "add event" calls from using a different signature while that container exists.
 	 *
 	 * @tparam TArgs       Types of the signature.
 	 * @param WorldContext Context to get the world.
@@ -525,7 +526,7 @@ public:
 			{
 				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
 				const auto ActualTypeId = BaseEventContainer->GetTypeID();
-				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("The gameplay tag has already an assigned signature.")))
+				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("The gameplay tag already has an assigned signature.")))
 				{
 					BaseEventContainer->SetLockedSignature(true);
 				}
@@ -534,7 +535,7 @@ public:
 			}
 
 			FEventContainerType& EventContainer{ EventBus->Internal_AddActiveEvent<FEventContainerType>(GameplayTag) };
-			EventContainer.bLockedSignature = true;
+			EventContainer.SetLockedSignature(true);
 		});
 	}
 
@@ -544,7 +545,7 @@ public:
 	 * @param WorldContext Context to get the world
 	 * @param GameplayTag  Associated gameplay tag.
 	 */
-	static void UnLockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag);
+	static void UnlockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag);
 
 	/**
 	 * Broadcasts this delegate to all bound objects, except to those that may have expired.
