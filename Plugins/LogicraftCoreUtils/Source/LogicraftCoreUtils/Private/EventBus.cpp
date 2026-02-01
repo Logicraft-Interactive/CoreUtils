@@ -15,6 +15,21 @@ UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
 	return nullptr;
 }
 
+void UEventBus::UnLockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag)
+{
+	Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](ThisClass* EventBus)
+	{
+		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
+		{
+			BaseEventContainer->SetLockedSignature(false);
+			if (BaseEventContainer->GetSubscriberCount() == 0)
+			{
+				EventBus->Internal_Remove(GameplayTag);
+			}
+		}
+	});
+}
+
 bool UEventBus::Remove(const UObject* WorldContext, const FGameplayTag& GameplayTag, FDelegateHandle Handle)
 {
 	if (!Handle.IsValid())
@@ -27,7 +42,7 @@ bool UEventBus::Remove(const UObject* WorldContext, const FGameplayTag& Gameplay
 		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 		{
 			const bool Result{ BaseEventContainer->Remove(Handle) };
-			if (BaseEventContainer->GetSubscriberCount() == 0)
+			if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
 			{
 				EventBus->Internal_Remove(GameplayTag);
 			}
@@ -51,7 +66,7 @@ int32 UEventBus::RemoveAll(const UObject* WorldContext, const FGameplayTag& Game
 		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 		{
 			const int32 RemovedSubscriber{ BaseEventContainer->RemoveAll(UserObject) };
-			if (BaseEventContainer->GetSubscriberCount() == 0)
+			if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
 			{
 				EventBus->Internal_Remove(GameplayTag);
 			}

@@ -81,6 +81,17 @@ void FEventBusSpec::Define()
             TestEqual("Float match", ReceivedFloat, 3.14f);
         });
 
+        It("Should be able to lock a specific argument signature", [this]
+        {
+            UEventBus::LockSignature<int32, int32>(TestWorld, TestTag);
+            
+            TestTrue("Types match", UEventBus::IsArgsType<int32, int32>(TestWorld, TestTag));
+
+            UEventBus::UnLockSignature(TestWorld, TestTag);
+
+            TestFalse("Types don't match", UEventBus::IsArgsType<int32, int32>(TestWorld, TestTag));
+        });
+
         It("Should be able to compare types", [this]
         {
             UEventBus::AddLambda(TestWorld, TestTag, [](int, float, FString){});
