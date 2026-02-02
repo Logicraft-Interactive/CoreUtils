@@ -4,12 +4,13 @@
 #include "EventBus.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Engine/GameInstance.h"
 
 UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
 {
 	if (UWorld* World{ GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::LogAndReturnNull) })
 	{
-		return World->GetSubsystem<ThisClass>();
+		return World->GetGameInstance()->GetSubsystem<ThisClass>();
 	}
 
 	return nullptr;
