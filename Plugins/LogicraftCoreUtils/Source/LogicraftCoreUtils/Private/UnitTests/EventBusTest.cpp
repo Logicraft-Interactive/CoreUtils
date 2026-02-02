@@ -7,11 +7,13 @@
 #include "NativeGameplayTags.h"
 #include "Engine/World.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 #include "Misc/AutomationTest.h"
 
 BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.Core.EventBus", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
     UEventBus* EventBus = nullptr;
     UWorld* TestWorld = nullptr;
+    UGameInstance* TestGameInstance = nullptr;
     FGameplayTag TestTag;
 END_DEFINE_SPEC(FEventBusSpec)
 
@@ -22,23 +24,29 @@ void FEventBusSpec::Define()
     BeforeEach([this]
     {
         TestWorld = UWorld::CreateWorld(EWorldType::Game, false);
-       
+        
         FWorldContext& WorldContext = GEngine->CreateNewWorldContext(EWorldType::Game);
         WorldContext.SetCurrentWorld(TestWorld);
-       
-        EventBus = TestWorld->GetSubsystem<UEventBus>();
-       
-        if (!EventBus)
-        {
-             TestWorld->InitializeSubsystems();
-             EventBus = TestWorld->GetSubsystem<UEventBus>();
-        }
+        
+        TestGameInstance = NewObject<UGameInstance>(GEngine);
+        TestGameInstance->Init();
+        
+        WorldContext.OwningGameInstance = TestGameInstance;
+        TestWorld->SetGameInstance(TestGameInstance);
+        
+        EventBus = TestGameInstance->GetSubsystem<UEventBus>();
        
         TestTag = FGameplayTag::RequestGameplayTag(TEXT("Test.Event.Bus"));
     });
 
     AfterEach([this]
     {
+        if (TestGameInstance)
+        {
+            TestGameInstance->Shutdown();
+            TestGameInstance = nullptr;
+        }
+
         if (TestWorld)
         {
             GEngine->DestroyWorldContext(TestWorld);
@@ -147,23 +155,10 @@ void FEventBusSpec::Define()
             UEventBus::Broadcast(TestWorld, TestTag, 123);
 
             TestTrue("Helper ran", Helper->bDidRun);
-            TestTrue("Second listener ran (depending on implementation order, but shouldn't crash)", bSecondListenerRun);
-            TestFalse("Should be unbound after self-removal (if it was the only one, strictly checking specific handle)", UEventBus::IsBoundToObject(TestWorld, TestTag, &Helper.Get()));
+            TestTrue("Second listener ran", bSecondListenerRun);
+            TestFalse("Should be unbound after self-removal", UEventBus::IsBoundToObject(TestWorld, TestTag, &Helper.Get()));
         });
     });
-    
-    //This test does work but since I'm using ensureMsgf AddExpectedError doesn't work and still fail the test.
-    // Describe("Safety", [this]()
-    // {
-    //      It("Should handle type mismatch gracefully (Ensure check logs expected)", [this]()
-    //      {
-    //          AddExpectedError(TEXT("Unable to broadcast a callback of a different type"));
-    //          
-    //          UEventBus::AddLambda(TestWorld, TestTag, [](int32){});
-    //          
-    //          UEventBus::Broadcast(TestWorld, TestTag, 1.0f); 
-    //      });
-    // });
 }
 
 #endif

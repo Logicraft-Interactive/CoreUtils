@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "Subsystems/WorldSubsystem.h"
+#include "Subsystems/GameInstanceSubsystem.h"
 #include "EventBus.generated.h"
 
 namespace TypeTraits
@@ -214,7 +214,7 @@ namespace EventBus
  * are removed a new signature can be attributed.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API UEventBus : public UWorldSubsystem
+class LOGICRAFTCOREUTILS_API UEventBus : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 
