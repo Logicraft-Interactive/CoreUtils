@@ -77,13 +77,13 @@ void FEventBusSpec::Define()
             FString ReceivedStr;
             float ReceivedFloat = 0.0f;
 
-            UEventBus::AddLambda(TestWorld, TestTag, [&](FString S, float F)
+            UEventBus::AddLambda(TestWorld, TestTag, [&](const FString& S, float F)
             {
                 ReceivedStr = S;
                 ReceivedFloat = F;
             });
 
-            UEventBus::Broadcast(TestWorld, TestTag, FString("Hello"), 3.14f);
+            UEventBus::Broadcast<const FString&>(TestWorld, TestTag, FString("Hello"), 3.14f);
 
             TestEqual("String match", ReceivedStr, FString("Hello"));
             TestEqual("Float match", ReceivedFloat, 3.14f);
@@ -118,7 +118,8 @@ void FEventBusSpec::Define()
         {
             int32 CallCount = 0;
             FDelegateHandle Handle = UEventBus::AddLambda(TestWorld, TestTag, [&](int32) { CallCount++; });
-            
+
+            int a{0};
             UEventBus::Broadcast(TestWorld, TestTag, 1);
             UEventBus::Remove(TestWorld, TestTag, Handle);
             UEventBus::Broadcast(TestWorld, TestTag, 2);
