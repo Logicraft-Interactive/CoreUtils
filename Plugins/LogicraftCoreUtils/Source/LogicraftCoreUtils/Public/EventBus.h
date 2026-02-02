@@ -85,6 +85,9 @@ struct IEventContainerBase
 	virtual int32 AddSubscriber() = 0;
 	virtual int32 RemoveSubscriber() = 0;
 	virtual int32 GetSubscriberCount() const = 0;
+
+	virtual void SetLockedSignature(bool InLockedSignature) = 0;
+	virtual bool GetLockedSignature() const = 0;
 };
 
 template<typename ...Args>
@@ -92,6 +95,7 @@ struct TEventContainer final : IEventContainerBase
 {
 	int32 SubscriberCount{ 0 };
 	TMulticastDelegate<void(Args...)> MulticastDelegate;
+	bool bLockedSignature{ false };
 
 	static const void* StaticGetTypeID()
 	{
@@ -125,6 +129,9 @@ struct TEventContainer final : IEventContainerBase
 	virtual int32 AddSubscriber() override { return ++SubscriberCount; }
 	virtual int32 RemoveSubscriber() override { return --SubscriberCount; }
 	virtual int32 GetSubscriberCount() const override { return SubscriberCount; }
+
+	virtual void SetLockedSignature(bool InLockedSignature) override { bLockedSignature = InLockedSignature; }
+	virtual bool GetLockedSignature() const override { return bLockedSignature; }
 };
 
 namespace EventBus
@@ -500,6 +507,47 @@ public:
 	}
 
 	/**
+	 * Lock a specific type signature.
+	 * This pre-associates types with gameplay tags and locks the signature of the current event container,
+	 * preventing subsequent "add event" calls from using a different signature while that container exists.
+	 *
+	 * @tparam TArgs       Types of the signature.
+	 * @param WorldContext Context to get the world.
+	 * @param GameplayTag  Associated gameplay tag.
+	 */
+	template<typename ...TArgs>
+	static void LockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag)
+	{
+		Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](ThisClass* EventBus)
+		{
+			using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
+
+			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
+			{
+				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
+				const auto ActualTypeId = BaseEventContainer->GetTypeID();
+				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("The gameplay tag already has an assigned signature.")))
+				{
+					BaseEventContainer->SetLockedSignature(true);
+				}
+
+				return;
+			}
+
+			FEventContainerType& EventContainer{ EventBus->Internal_AddActiveEvent<FEventContainerType>(GameplayTag) };
+			EventContainer.SetLockedSignature(true);
+		});
+	}
+
+	/**
+	 * Unlock a specific type signature.
+	 * 
+	 * @param WorldContext Context to get the world
+	 * @param GameplayTag  Associated gameplay tag.
+	 */
+	static void UnlockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag);
+
+	/**
 	 * Broadcasts this delegate to all bound objects, except to those that may have expired.
 	 *
 	 * The constness of this method allows for broadcasting from const functions.
@@ -520,10 +568,10 @@ public:
 			{
 				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
 				const auto ActualTypeId = BaseEventContainer->GetTypeID();
-				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to add a callback of a different type.")))
+				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to broadcast a callback with those types of arguments.")))
 				{
-					auto* EventContainer = static_cast<FEventContainerType*>(&*BaseEventContainer);
-					EventContainer->MulticastDelegate.Broadcast(Forward<TInArgs>(InArgs)...);
+					auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
+					EventContainer.MulticastDelegate.Broadcast(Forward<TInArgs>(InArgs)...);
 				}
 			}
 		}, Forward<TArgs>(Args)...);
