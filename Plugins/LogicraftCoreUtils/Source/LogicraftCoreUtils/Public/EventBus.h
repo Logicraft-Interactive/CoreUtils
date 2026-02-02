@@ -557,12 +557,12 @@ public:
 	 * @param   Args		 Callback arguments.
 	 */
 	template<typename ...TArgs>
-	static void Broadcast(const UObject* WorldContext, const FGameplayTag& GameplayTag, TArgs&&... Args)
+	static void Broadcast(const UObject* WorldContext, const FGameplayTag& GameplayTag, TArgs... Args)
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
 		
 		Internal_ExecuteOnValidContext(WorldContext,
-		[&GameplayTag]<typename ...TInArgs>(const ThisClass* EventBus, TInArgs&&... InArgs)
+		[&GameplayTag](const ThisClass* EventBus, TArgs... InArgs)
 		{
 			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 			{
@@ -571,10 +571,10 @@ public:
 				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to broadcast a callback with those types of arguments.")))
 				{
 					auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
-					EventContainer.MulticastDelegate.Broadcast(Forward<TInArgs>(InArgs)...);
+					EventContainer.MulticastDelegate.Broadcast(InArgs...);
 				}
 			}
-		}, Forward<TArgs>(Args)...);
+		}, Args...);
 	}
 
 	/**
