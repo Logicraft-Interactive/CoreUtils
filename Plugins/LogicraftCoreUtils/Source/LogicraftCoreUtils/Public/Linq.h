@@ -53,51 +53,118 @@ namespace Linq
 				}
 			}
 		};
-		
+
+
 		// Base interface for all LINQ iterators.
 		// Follows a pull-based iterator pattern (Next -> GetCurrent).
 		template <typename Derived ,typename T>
 		class ILinqIterator
-		{
-			friend Derived;
-
-			bool Next_Implementation()
-			{
-				return false;
-			}
-
-			// Resets the iterator to the beginning.
-			void Reset_Implementation()
-			{
-			}
-
-			// Gets the current element in the iteration.
-			const T& GetCurrent_Implementation()
-			{
-				return T();
-			}
+		{ 
 		public:
 			virtual ~ILinqIterator() = default;
 
 			// Advances to the next element. Returns true if successful, false if end of collection.
 			bool Next()
 			{
-				return static_cast<Derived>(*this).Next_Implementation();
+				return static_cast<Derived*>(this)->Next_Implementation();
 			}
 
 			// Resets the iterator to the beginning.
 			void Reset()
 			{
-				static_cast<Derived>(*this).Reset_Implementation();
+				static_cast<Derived*>(this)->Reset_Implementation();
 			}
 
 			// Gets the current element in the iteration.
 			const T& GetCurrent()
 			{
-				return static_cast<Derived>(*this).GetCurrent_Implementation();
+				return static_cast<Derived*>(this)->GetCurrent_Implementation();
 			}
 		};
 
+		template<typename T>
+		class TLinqConcept
+		{
+		public:
+			virtual ~TLinqConcept() = default;
+			
+			virtual bool Next() = 0;
+
+			virtual void Reset() = 0;
+
+			virtual const T&  GetCurrent() = 0;
+		};
+
+		template<typename TIterator, typename T>
+		requires std::is_base_of_v<ILinqIterator<TIterator, T>, TIterator>
+		class TLinqModel : public TLinqConcept<T>
+		{
+		private:
+			static constexpr bool bIsOnStack = sizeof(TIterator) < 64; 
+			using Type = std::conditional_t<bIsOnStack, TIterator, TUniquePtr<TIterator>>;
+			Type Iterator{};
+
+
+			template<typename It>
+			static Type MakeIterator(It&& InIterator)
+			{
+				if constexpr (bIsOnStack)
+				{
+					return Forward<It>(InIterator);          // move direct dans le Type (= TIterator)
+				}
+				else
+				{
+					return MakeUnique<TIterator>(Forward<It>(InIterator)); // wrap dans un UniquePtr
+				}
+			}
+			
+		public:
+			template<typename It = TIterator>
+			explicit TLinqModel(It&& InIterator)
+			: Iterator(MakeIterator(Forward<It>(InIterator)))   // ← move-construct, no default ctor needed
+			{
+			}
+			
+			virtual ~TLinqModel() override = default;
+
+			virtual bool Next() override
+			{
+				if constexpr (bIsOnStack)
+				{
+					return Iterator.Next();
+				}
+				else
+				{
+					return Iterator->Next(); 
+				}
+			}
+
+			virtual void Reset() override
+			{
+				if constexpr (bIsOnStack)
+				{
+					Iterator.Reset();
+				}
+				else
+				{
+					Iterator->Reset(); 
+				}
+			}
+
+			virtual const T& GetCurrent() override
+			{
+				if constexpr (bIsOnStack)
+				{
+					return Iterator.GetCurrent();
+				}
+				else
+				{
+					return Iterator->GetCurrent(); 
+				}
+			}
+		};
+		
+		
 		// Iterator for iterating over an existing TArray pointer (L-Value source).
 		// Does not own the memory of the array.
 		template <typename T>
@@ -164,19 +231,19 @@ namespace Linq
 		template <typename T, typename Pred>
 		class TWhereIterator : public ILinqIterator<TWhereIterator<T, Pred> ,T>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 			const T* CurrentValue = {};
 			Pred Predicate;
 
 		public:
 			template <typename P = Pred>
 			requires std::is_same_v<std::remove_cvref_t<P>, std::remove_cvref_t<Pred>>
-			TWhereIterator(TUniquePtr<ILinqIterator<T>>&& InSource, P&& InPredicate)
+			TWhereIterator(TUniquePtr<TLinqConcept<T>>&& InSource, P&& InPredicate)
 				: Source(MoveTemp(InSource)), Predicate(Forward<P>(InPredicate))
 			{
 			}
 
-			virtual bool Next() override
+			bool Next_Implementation()
 			{
 				// Keep pulling from source until predicate is met or source is exhausted.
 				while (Source->Next())
@@ -190,13 +257,13 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 				CurrentValue = {};
 			}
 
-			virtual const T& GetCurrent() override
+			 const T& GetCurrent_Implementation()
 			{
 				return *CurrentValue;
 			}
@@ -204,21 +271,20 @@ namespace Linq
 
 		// Projects/Transforms elements from type 'In' to type 'Out' (Select clause).
 		template <typename In, typename Out, typename Sel>
-		class TSelectIterator : public ILinqIterator<std::remove_reference_t<Out>>
+		class TSelectIterator : public ILinqIterator<TSelectIterator<In, Out, Sel>, std::remove_reference_t<Out>>
 		{
-			TUniquePtr<ILinqIterator<In>> Source = nullptr; 
+			TUniquePtr<TLinqConcept<In>> Source = nullptr; 
 			TStorageTraits<Out> CurrentValue = {};
 			Sel Selector;
-
 		public:
 			template <typename S = Sel>
 			requires std::is_same_v<std::remove_cvref_t<S>, std::remove_cvref_t<Sel>>
-			TSelectIterator(TUniquePtr<ILinqIterator<In>>&& InSource, S&& InSelector)
+			TSelectIterator(TUniquePtr<TLinqConcept<In>>&& InSource, S&& InSelector)
 				: Source(MoveTemp(InSource)), Selector(Forward<S>(InSelector))
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{
 				while (Source->Next())
 				{
@@ -229,13 +295,13 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 				CurrentValue.Set({});
 			}
 
-			virtual const std::remove_reference_t<Out>& GetCurrent() override
+			 const std::remove_reference_t<Out>& GetCurrent_Implementation()
 			{
 				return CurrentValue.Get();
 			}
@@ -243,21 +309,21 @@ namespace Linq
 
 		// Applies a modification function to elements and returns the modified element.
 		template <typename T, typename Func>
-		class TApplyIterator : public ILinqIterator<std::remove_reference_t<T>>
+		class TApplyIterator : public ILinqIterator<TApplyIterator<T, Func>, std::remove_reference_t<T>>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 			TStorageTraits<T> CurrentValue;
 			Func Modifier;
 
 		public:
 			template <typename F = Func>
 			requires std::is_same_v<std::remove_cvref_t<F>, std::remove_cvref_t<Func>>
-			TApplyIterator(TUniquePtr<ILinqIterator<T>>&& InSource, F&& InModifier)
+			TApplyIterator(TUniquePtr<TLinqConcept<T>>&& InSource, F&& InModifier)
 				: Source(MoveTemp(InSource)), Modifier(Forward<F>(InModifier))
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{
 				while (Source->Next())
 				{
@@ -267,13 +333,13 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 				CurrentValue.Set({});
 			}
 
-			virtual const std::remove_reference_t<T>& GetCurrent() override
+			 const std::remove_reference_t<T>& GetCurrent_Implementation()
 			{
 				return CurrentValue.Get();
 			}
@@ -281,20 +347,20 @@ namespace Linq
 
 		// Executes a function on elements purely for side effects (like foreach), but maintains the chain.
 		template <typename T, typename Func>
-		class TExecuteIterator : public ILinqIterator<T>
+		class TExecuteIterator : public ILinqIterator<TExecuteIterator<T, Func>, T>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 			Func Modifier;
 
 		public:
 			template <typename F = Func>
 			requires std::is_same_v<std::remove_cvref_t<F>, std::remove_cvref_t<Func>>
-			TExecuteIterator(TUniquePtr<ILinqIterator<T>>&& InSource, F&& InAction)
+			TExecuteIterator(TUniquePtr<TLinqConcept<T>>&& InSource, F&& InAction)
 				: Source(MoveTemp(InSource)), Modifier(Forward<F>(InAction))
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{
 				while (Source->Next())
 				{
@@ -304,12 +370,12 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 			}
 
-			virtual const T& GetCurrent() override
+			 const T& GetCurrent_Implementation()
 			{
 				return Source->GetCurrent();
 			}
@@ -319,18 +385,18 @@ namespace Linq
 		template <typename In, typename Out>
 		requires Concept::DerivedFromObject<std::remove_pointer_t<In>>
 		&& Concept::DerivedFromObject<std::remove_pointer_t<Out>>
-		class TCastIterator : public ILinqIterator<Out>
+		class TCastIterator : public ILinqIterator<TCastIterator<In, Out>, Out>
 		{
-			TUniquePtr<ILinqIterator<In>> Source = nullptr;
+			TUniquePtr<TLinqConcept<In>> Source = nullptr;
 			Out CurrentValue = {};
 
 		public:
-			TCastIterator(TUniquePtr<ILinqIterator<In>>&& InSource)
+			TCastIterator(TUniquePtr<TLinqConcept<In>>&& InSource)
 				: Source(MoveTemp(InSource))
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{
 				while (Source->Next())
 				{
@@ -343,13 +409,13 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 				CurrentValue = {};
 			}
 
-			virtual const Out& GetCurrent() override
+			 const Out& GetCurrent_Implementation()
 			{
 				return CurrentValue;
 			}
@@ -358,17 +424,17 @@ namespace Linq
 		// Filters out invalid Unreal Objects (checks IsValid).
 		template <typename T>
 		requires Concept::DerivedFromObject<std::remove_pointer_t<T>>
-		class TIsValidIterator : public ILinqIterator<T>
+		class TIsValidIterator : public ILinqIterator<TIsValidIterator<T>, T>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 
 		public:
-			TIsValidIterator(TUniquePtr<ILinqIterator<T>>&& InSource)
+			TIsValidIterator(TUniquePtr<TLinqConcept<T>>&& InSource)
 				: Source(MoveTemp(InSource))
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{
 				while (Source->Next())
 				{
@@ -380,12 +446,12 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 			}
 
-			virtual const T& GetCurrent() override
+			 const T& GetCurrent_Implementation()
 			{
 				return Source->GetCurrent();
 			}
@@ -393,18 +459,18 @@ namespace Linq
 
 		// Limits the number of elements returned.
 		template<typename T>
-		class TTakeIterator : public ILinqIterator<T>
+		class TTakeIterator : public ILinqIterator<TTakeIterator<T>, T>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 			int MaxElement = 0;
 			int Counter = 0;
 		public:
-			TTakeIterator(TUniquePtr<ILinqIterator<T>>&& InSource, const int InNumber)
+			TTakeIterator(TUniquePtr<TLinqConcept<T>>&& InSource, const int InNumber)
 				: Source(MoveTemp(InSource)), MaxElement(InNumber)
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{				
 				if (Counter >= MaxElement)
 				{
@@ -421,13 +487,13 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 				Counter = 0;
 			}
 
-			virtual const T& GetCurrent() override
+			 const T& GetCurrent_Implementation()
 			{
 				return Source->GetCurrent();
 			}
@@ -435,18 +501,18 @@ namespace Linq
 
 		// Bypasses a specified number of elements and returns the rest.
 		template<typename T>
-		class TSkipIterator : public ILinqIterator<T>
+		class TSkipIterator : public ILinqIterator<TSkipIterator<T>, T>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 			int MaxElement = 0;
 			int Counter = 0;
 		public:
-			TSkipIterator(TUniquePtr<ILinqIterator<T>>&& InSource, const int InNumber)
+			TSkipIterator(TUniquePtr<TLinqConcept<T>>&& InSource, const int InNumber)
 				: Source(MoveTemp(InSource)), MaxElement(InNumber)
 			{
 			}
 
-			virtual bool Next() override
+			bool Next_Implementation()
 			{				
 				while (Source->Next())
 				{
@@ -459,13 +525,13 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			void Reset_Implementation()
 			{
 				Source->Reset();
 				Counter = 0;
 			}
 
-			virtual const T& GetCurrent() override
+			const T& GetCurrent_Implementation()
 			{
 				return Source->GetCurrent();
 			}
@@ -473,10 +539,10 @@ namespace Linq
 		
 		// Base class for sorting iterators. 
 		// NOTE: Sorting breaks the pure lazy evaluation pipeline because all data must be fetched and sorted before the first element can be returned.
-		template<typename T>
-		class TOrderByBaseIterator : public ILinqIterator<T>
+		template<typename T, typename Derived>
+		class TOrderByBaseIterator : public ILinqIterator<Derived, T>
 		{
-			TUniquePtr<ILinqIterator<T>> Source = nullptr;
+			TUniquePtr<TLinqConcept<T>> Source = nullptr;
 			bool bHasReset = true;
 			int CurrentIndex = -1;
 
@@ -493,19 +559,18 @@ namespace Linq
 					NewCollection.Add(Source->GetCurrent());
 				}
 				// Perform the sort.
-				SortMethod();
+				static_cast<Derived*>(this)->SortMethod();
 			}
 		protected:
 			TArray<T> NewCollection = {};
-			virtual void SortMethod() = 0;
 			
 		public:
-			TOrderByBaseIterator(TUniquePtr<ILinqIterator<T>>&& InSource)
+			TOrderByBaseIterator(TUniquePtr<TLinqConcept<T>>&& InSource)
 				: Source(MoveTemp(InSource))
 			{
 			}
 
-			virtual bool Next() override
+			 bool Next_Implementation()
 			{	
 				BuildNewCollection();
 
@@ -517,7 +582,7 @@ namespace Linq
 				return false;
 			}
 
-			virtual void Reset() override
+			 void Reset_Implementation()
 			{
 				Source->Reset();
 				NewCollection.Empty();
@@ -525,7 +590,7 @@ namespace Linq
 				CurrentIndex = -1;
 			}
 
-			virtual const T& GetCurrent() override
+			 const T& GetCurrent_Implementation()
 			{
 				return NewCollection[CurrentIndex];
 			}
@@ -535,17 +600,19 @@ namespace Linq
 		template<typename T>
 		requires std::totally_ordered<T> ||
 			requires (T Result){ Result < std::declval<decltype(Result)>(); }
-		class TSimpleOrderByIterator : public TOrderByBaseIterator<T>
+		class TSimpleOrderByIterator : public TOrderByBaseIterator<T, TSimpleOrderByIterator<T>>
 		{
 		protected:
-			virtual void SortMethod() override
+			friend TOrderByBaseIterator<T, TSimpleOrderByIterator<T>>;
+			
+			void SortMethod()
 			{
 				Algo::Sort(this->NewCollection);
 			}
 			
 		public:
-			explicit TSimpleOrderByIterator(TUniquePtr<ILinqIterator<T>>&& InSource)
-				: TOrderByBaseIterator<T>(MoveTemp(InSource))
+			explicit TSimpleOrderByIterator(TUniquePtr<TLinqConcept<T>>&& InSource)
+				: TOrderByBaseIterator<T, TSimpleOrderByIterator<T>>(MoveTemp(InSource))
 			{
 			}
 		};
@@ -554,11 +621,12 @@ namespace Linq
 		template<typename T, typename Sel>
 		requires std::totally_ordered<std::invoke_result_t<Sel, T>> ||
 			requires (std::invoke_result_t<Sel, T> Result){ Result <std::declval<decltype(Result)>(); }
-		class TSelectorOrderByIterator : public TOrderByBaseIterator<T>
+		class TSelectorOrderByIterator : public TOrderByBaseIterator<T, TSelectorOrderByIterator<T, Sel>>
 		{
 			Sel Selector;
+			friend TOrderByBaseIterator<T, TSelectorOrderByIterator<T, Sel>>;
 		protected:
-			virtual void SortMethod() override
+			void SortMethod()
 			{
 				Algo::SortBy(this->NewCollection, Selector);
 			}
@@ -566,8 +634,8 @@ namespace Linq
 		public:
 			template<typename S = Sel>
 			requires std::is_same_v<std::remove_cvref_t<S>, std::remove_cvref_t<Sel>>
-			explicit TSelectorOrderByIterator(TUniquePtr<ILinqIterator<T>>&& InSource, Sel&& InSelector)
-				: TOrderByBaseIterator<T>(MoveTemp(InSource)), Selector(Forward<S>(InSelector))
+			explicit TSelectorOrderByIterator(TUniquePtr<TLinqConcept<T>>&& InSource, Sel&& InSelector)
+				: TOrderByBaseIterator<T, TSelectorOrderByIterator<T, Sel>>(MoveTemp(InSource)), Selector(Forward<S>(InSelector))
 			{
 			}
 		};
@@ -575,11 +643,12 @@ namespace Linq
 		// Sorting using a custom comparator.
 		template<typename T, typename Comp>
 		requires requires(T a, T b){ {a < b} -> std::convertible_to<bool>; } || std::totally_ordered<T>
-		class TComparatorOrderByIterator : public TOrderByBaseIterator<T>
+		class TComparatorOrderByIterator : public TOrderByBaseIterator<T, TComparatorOrderByIterator<T, Comp>>
 		{
 			Comp Selector;
+			friend TOrderByBaseIterator<T, TComparatorOrderByIterator<T, Comp>>;
 		protected:
-			virtual void SortMethod() override
+			void SortMethod()
 			{
 				Algo::Sort(this->NewCollection, Selector);
 			}
@@ -587,8 +656,8 @@ namespace Linq
 		public:
 			template<typename C = Comp>
 			requires std::is_same_v<std::remove_cvref_t<C>, std::remove_cvref_t<Comp>>
-			explicit TComparatorOrderByIterator(TUniquePtr<ILinqIterator<T>>&& InSource, C&& InSelector)
-				: TOrderByBaseIterator<T>(MoveTemp(InSource)), Selector(Forward<C>(InSelector))
+			explicit TComparatorOrderByIterator(TUniquePtr<TLinqConcept<T>>&& InSource, C&& InSelector)
+				: TOrderByBaseIterator<T, TComparatorOrderByIterator<T, Comp>>(MoveTemp(InSource)), Selector(Forward<C>(InSelector))
 			{
 			}
 		};
@@ -598,10 +667,10 @@ namespace Linq
 		template <typename T>
 		class TLinqQuery
 		{
-			TUniquePtr<ILinqIterator<T>> Iterator;
+			TUniquePtr<TLinqConcept<T>> Iterator;
 
 		public:
-			explicit TLinqQuery(TUniquePtr<ILinqIterator<T>>&& InSource) : Iterator(MoveTemp(InSource))
+			explicit TLinqQuery(TUniquePtr<TLinqConcept<T>>&& InSource) : Iterator(MoveTemp(InSource))
 			{
 			}
 
@@ -611,32 +680,36 @@ namespace Linq
 			template <typename Pred>
 			TLinqQuery<T> Where(Pred&& Predicate)
 			{
-				return TLinqQuery<T>(MakeUnique<TWhereIterator<T, Pred>>(
-					MoveTemp(Iterator), Forward<Pred>(Predicate)));
+				using IteratorType = TWhereIterator<T, Pred>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Forward<Pred>(Predicate))));
 			}
 
 			// Projects each element of the sequence into a new form.
 			template <typename Sel, typename Out = std::invoke_result_t<Sel, T>>
 			TLinqQuery<Out> Select(Sel&& Selector)
 			{
-				return TLinqQuery<Out>(MakeUnique<TSelectIterator<T, Out, Sel>>(
-					MoveTemp(Iterator), Forward<Sel>(Selector)));
+				using IteratorType = TSelectIterator<T, Out, Sel>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Forward<Sel>(Selector))));
 			}
 
 			// Applies a function to modify elements in place (returns modified sequence).
 			template <typename Func>
 			TLinqQuery<T> Apply(Func&& Modifier)
 			{
-				return TLinqQuery<T>(MakeUnique<TApplyIterator<T, Func>>(
-					MoveTemp(Iterator), Forward<Func>(Modifier)));
+				using IteratorType = TApplyIterator<T, Func>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Forward<Func>(Modifier))));
 			}
 
 			// Executes a function on each element (side effect) without altering the stream type.
 			template <typename Func>
 			TLinqQuery<T> Execute(Func&& Modifier)
-			{
-				return TLinqQuery<T>(MakeUnique<TExecuteIterator<T, Func>>(
-					MoveTemp(Iterator), Forward<Func>(Modifier)));
+			{				
+				using IteratorType = TExecuteIterator<T, Func>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Forward<Func>(Modifier))));
 			}
 
 			// Sorts the elements using a custom comparator.
@@ -644,53 +717,62 @@ namespace Linq
 			requires std::predicate<Comp, T, T>
 			TLinqQuery<T> OrderBy(Comp&& Comparator)
 			{
-				return TLinqQuery<T>(MakeUnique<TComparatorOrderByIterator<T, Comp>>(
-					MoveTemp(Iterator), Forward<Comp>(Comparator)));
+				using IteratorType = TComparatorOrderByIterator<T, Comp>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Forward<Comp>(Comparator))));
+				
 			}
  
 			// Sorts the elements using default comparison.
 			TLinqQuery  OrderBy()
 			{
-				return TLinqQuery (MakeUnique<TSimpleOrderByIterator<T>>(
-					MoveTemp(Iterator)));
+				using IteratorType = TSimpleOrderByIterator<T>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator))));
 			}
 
 			// Sorts the elements based on a key returned by the selector.
 			template <typename Sel>
 			TLinqQuery<T> OrderBy(Sel&& Selector)
 			{
-				return TLinqQuery<T>(MakeUnique<TSelectorOrderByIterator<T, Sel>>(
-					MoveTemp(Iterator), Forward<Sel>(Selector)));
+				using IteratorType = TSelectorOrderByIterator<T, Sel>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Forward<Sel>(Selector))));
 			}
 
 			// Casts elements to a specific UObject derived type (filters out failed casts).
 			template <typename NewType>
 			TLinqQuery<NewType*> Cast()
 			{
-				return TLinqQuery<NewType*>(MakeUnique<TCastIterator<T, NewType*>>(
-					MoveTemp(Iterator)));
+				using IteratorType = TCastIterator<T, NewType*>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator))));
 			}
 
 			// Filters out invalid objects (Isvalid(Obj) == false).
 			template <typename NewType = T>
 			TLinqQuery IsValid()
 			{
-				return TLinqQuery<NewType>(MakeUnique<TIsValidIterator<T>>(
-					MoveTemp(Iterator)));
+				using IteratorType = TIsValidIterator<T>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator))));
 			}
 
 			// Bypasses a specified number of elements.
 			TLinqQuery Skip(const int Number)
 			{
-				return TLinqQuery(MakeUnique<TSkipIterator<T>>(
-					MoveTemp(Iterator), Number));
+				using IteratorType = TSkipIterator<T>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Number)));
+				
 			}
  
 			// Returns a specified number of contiguous elements from the start.
 			TLinqQuery Take(const int Number)
 			{
-				return TLinqQuery(MakeUnique<TTakeIterator<T>>(
-					MoveTemp(Iterator), Number));
+				using IteratorType = TTakeIterator<T>;
+				return TLinqQuery<T>(MakeUnique<TLinqModel<IteratorType, T>>(IteratorType(
+					MoveTemp(Iterator), Number)));
 			}
 
 			// --- Terminal Operations (Execute the Query) ---
@@ -1025,15 +1107,17 @@ namespace Linq
 
 	// Starts a Linq query from an existing TArray variable (L-Value).
 	template <typename T>
-	Private::TLinqQuery<T> Start(TArray<T>& Source)
+	Private::TLinqQuery<T> Start(const TArray<T>& Source)
 	{
-		return Private::TLinqQuery<T>(MakeUnique<Private::TLValueSourceIterator<T>>(&Source));
+		using IteratorType = Private::TLValueSourceIterator<T>;
+		return Private::TLinqQuery<T>(MakeUnique<Private::TLinqModel<IteratorType, T>>(IteratorType(&Source)));
 	}
 
 	// Starts a Linq query from a temporary TArray (R-Value), taking ownership.
 	template <typename T>
 	Private::TLinqQuery<T> Start(TArray<T>&& Source)
 	{
-		return Private::TLinqQuery<T>(MakeUnique<Private::TRValueSourceIterator<T>>(MoveTemp(Source)));
+		using IteratorType = Private::TRValueSourceIterator<T>;
+		return Private::TLinqQuery<T>(MakeUnique<Private::TLinqModel<IteratorType, T>>(IteratorType(MoveTemp(Source))));
 	}
 }
