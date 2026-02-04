@@ -2,7 +2,9 @@
 	"id": "Linq",
 	"name": "Linq",
 	"enabledTests": [
+		"Project.Linq.BigIntegerArrayOperation",
 		"Project.Linq.IntegerLogic",
+		"Project.Linq.MultiContainerSupport",
 		"Project.Linq.Sorting",
 		"Project.Linq.UObjectFeatures"
 	]
