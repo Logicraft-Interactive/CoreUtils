@@ -288,6 +288,9 @@ bool FLinqMultiContainerSupport::RunTest(const FString& Parameters)
 			return Id++;
 		});
 
+	auto SameMap = Linq::Start(Map)
+		.ToMap();
+	
 	auto Set = Linq::Start(Map)
 		.Take(5)
 		.ToSet();
