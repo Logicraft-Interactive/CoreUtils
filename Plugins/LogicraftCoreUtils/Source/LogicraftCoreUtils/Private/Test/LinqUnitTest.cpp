@@ -81,8 +81,8 @@ bool FLinqSortingTest::RunTest(const FString& Parameters)
 	TestEqual("First item should be 9", Descending[0], 9);
 	
 	// Test: First / FirstOrDefault
-	int32 FirstMatch = Linq::Start(Unsorted).First([](int32 N) { return N > 4; });
-	TestEqual("First number > 4 should be 5", FirstMatch, 5);
+	TOptional<int32> FirstMatch = Linq::Start(Unsorted).First([](int32 N) { return N > 4; });
+	TestEqual("First number > 4 should be 5", FirstMatch.IsSet() ? *FirstMatch : -1, 5);
 
 	int32 Missing = Linq::Start(Unsorted).FirstOrDefault([](int32 N) { return N > 100; }, -1);
 	TestEqual("Should return default value -1 when not found", Missing, -1);
@@ -141,10 +141,160 @@ bool FLinqUObjectTest::RunTest(const FString& Parameters)
 		.Cast<UObject>() // Trivial cast
 		.ToArray();
 
+
 	TestEqual("Cast<UObject> should keep valid objects", CastResult.Num(), 2);
 
 	// Clean up (GC usually handles this, but good practice in tests if creating Root objects)
 	ValidObj = nullptr;
 
+	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqBigIntegerArrayOperation, "Project.Linq.BigIntegerArrayOperation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLinqBigIntegerArrayOperation::RunTest(const FString& Parameters)
+{
+	const int32 ElementCount = 1000000; // 1 Million d'éléments
+    TArray<int64> BigArray;
+    BigArray.Reserve(ElementCount);
+
+    // Remplissage avec des valeurs pseudo-aléatoires
+    for (int32 i = 0; i < ElementCount; ++i)
+    {
+        BigArray.Add(FMath::RandRange(0, 10000));
+    }
+
+    UE_LOG(LogTemp, Display, TEXT("--- START BENCHMARK (N=%d) ---"), ElementCount);
+
+    // ==========================================
+    // TEST 1: AGGREGATION (Where + Sum)
+    // ==========================================
+    {
+        // --- BASELINE (Raw Loop) ---
+        double StartRaw = FPlatformTime::Seconds();
+        int64 SumRaw = 0;
+        for (int32 Val : BigArray)
+        {
+            if (Val % 2 == 0) // Nombres pairs uniquement
+            {
+                SumRaw += Val;
+            }
+        }
+        double DurationRaw = (FPlatformTime::Seconds() - StartRaw) * 1000.0;
+
+        // --- LINQ ---
+        double StartLinq = FPlatformTime::Seconds();
+        int64 SumLinq = Linq::Start(BigArray)
+            .Where([](int32 Val) { return Val % 2 == 0; })
+            .Sum(); // On somme en int64 pour éviter l'overflow
+        double DurationLinq = (FPlatformTime::Seconds() - StartLinq) * 1000.0;
+
+        // Validation et Log
+        TestEqual(TEXT("Sum Results match"), SumLinq, SumRaw);
+        UE_LOG(LogTemp, Display, TEXT("[Sum] Raw: %.2f ms | LINQ: %.2f ms | Overhead: %.2fx"), DurationRaw, DurationLinq, DurationLinq / DurationRaw);
+    }
+
+    // ==========================================
+    // TEST 2: ALLOCATION (Select + ToArray)
+    // ==========================================
+    {
+        // --- BASELINE (Raw Loop) ---
+        double StartRaw = FPlatformTime::Seconds();
+        TArray<FString> StrArrayRaw;
+        StrArrayRaw.Reserve(ElementCount); // Optimisation manuelle souvent oubliée en LINQ
+        for (int32 Val : BigArray)
+        {
+            StrArrayRaw.Add(FString::FromInt(Val));
+        }
+        double DurationRaw = (FPlatformTime::Seconds() - StartRaw) * 1000.0;
+
+        // --- LINQ ---
+        double StartLinq = FPlatformTime::Seconds();
+        TArray<FString> StrArrayLinq = Linq::Start(BigArray)
+            .Select([](int32 Val) { return FString::FromInt(Val); })
+            .ToArray();
+        double DurationLinq = (FPlatformTime::Seconds() - StartLinq) * 1000.0;
+
+
+        // Validation et Log
+        TestEqual(TEXT("ToArray Count matches"), StrArrayLinq.Num(), StrArrayRaw.Num());
+        UE_LOG(LogTemp, Display, TEXT("[Select+ToArray] Raw: %.2f ms | LINQ: %.2f ms | Overhead: %.2fx"),
+        	DurationRaw, DurationLinq, DurationLinq / DurationRaw);
+    }
+
+    // ==========================================
+    // TEST 3: EARLY EXIT (First)
+    // ==========================================
+    {
+        // On cherche une valeur qui est sûrement vers la fin ou milieu pour voir l'itération
+        int64 TargetValue = 9999; 
+        
+        // --- BASELINE (Raw Loop) ---
+        double StartRaw = FPlatformTime::Seconds();
+        int32 FoundRaw = -1;
+        for (int32 Val : BigArray)
+        {
+            if (Val == TargetValue)
+            {
+                FoundRaw = Val;
+                break; // Break manuel indispensable
+            }
+        }
+        double DurationRaw = (FPlatformTime::Seconds() - StartRaw) * 1000.0;
+
+        // --- LINQ ---
+        double StartLinq = FPlatformTime::Seconds();
+        // First() doit s'arrêter dès qu'il trouve (Lazy Evaluation), il ne doit pas parcourir tout le tableau
+        int32 FoundLinq = Linq::Start(BigArray).FirstOrDefault([TargetValue](int64 Val) { return Val == TargetValue; }, 0ll);
+        double DurationLinq = (FPlatformTime::Seconds() - StartLinq) * 1000.0;
+
+        // Validation et Log
+        TestEqual(TEXT("First Result matches"), FoundLinq, FoundRaw);
+        UE_LOG(LogTemp, Display, TEXT("[First] Raw: %.2f ms | LINQ: %.2f ms | Overhead: %.2fx"), DurationRaw, DurationLinq, DurationLinq / DurationRaw);
+    }
+	
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqMultiContainerSupport, "Project.Linq.MultiContainerSupport", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FLinqMultiContainerSupport::RunTest(const FString& Parameters)
+{
+	TArray<FString> Users = {
+		{TEXT("Alice")},
+		{TEXT("Bob")},
+		{TEXT("Charlie")},
+		{TEXT("David")},
+		{TEXT("Eve")},
+		{TEXT("Frank")},
+		{TEXT("Grace")},
+		{TEXT("Hannah")},
+		{TEXT("Isaac")},
+		{TEXT("Jack")}
+	};
+
+	auto Map = Linq::Start(Users)
+		.Where([](const FString& User)
+		{
+			return User.Len() > 3;
+		})
+		.ToMap(
+		[](const FString& User)
+		{
+			return User;
+		},
+		[Id = 0] (const FString& User) mutable{
+			return Id++;
+		});
+
+	auto SameMap = Linq::Start(Map)
+		.ToMap();
+	
+	auto Set = Linq::Start(Map)
+		.Take(5)
+		.ToSet();
+	
+	
 	return true;
 }
