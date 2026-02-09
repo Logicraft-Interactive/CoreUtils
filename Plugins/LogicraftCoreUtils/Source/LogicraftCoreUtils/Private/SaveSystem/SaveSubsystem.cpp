@@ -4,15 +4,25 @@
 #include "SaveSystem/SaveSubsystem.h"
 #include "LogCategory.h"
 
-void USaveSubsystem::SaveWorld(const FString& Version)
+void USaveSubsystem::SaveWorld(const FName& SlotName, const FString& Version)
 {
 	TOptional<VersionType> OptionalVersionTuple = ExtractVersion(Version);
 
 	if (!OptionalVersionTuple.IsSet())
 	{
-		UE_LOG(LogSaveSystem, Warning, TEXT("Invalid version format: %s"), *Version);
-		UE_LOGFMT()
+		UE_LOG(LogSaveSystem, Error, TEXT("Can't continue saving with invalid version format"));
+		return;
 	}
+
+	CurrentSave.ObjectsData.Empty();
+	CurrentSave.SaveSlotName = SlotName;
+	CurrentSave.SaveTimeStamp = FDateTime::Now();
+	CurrentSave.GlobalSaveVersion = Version;
+	
+}
+
+FObjectSaveData FSaveSerializer::SerializeObject(UObject* Object)
+{
 }
 
 TOptional<USaveSubsystem::VersionType> USaveSubsystem::ExtractVersion(const FString& Version)
