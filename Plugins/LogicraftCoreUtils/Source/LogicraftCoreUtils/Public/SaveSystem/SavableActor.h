@@ -22,21 +22,15 @@ class LOGICRAFTCOREUTILS_API ISavableActor
 
 	bool bIsDynamicSpawned = false;
 	TSubclassOf<AActor> DynamicSpawnClass = nullptr;
-	FName UniqueID;
+	FString UniqueID;
 
-	using FPropertyTuple = TTuple<FName, FString, TArray<int32>>;
-	
-	TMap<FString, TFunction<FPropertyTuple(int, int ,int, FPropertyTuple)>> MigrateLogics;
 	
 public:
-	void SetIsDynamicSpawned(TSubclassOf<AActor> SpawnActor, FGuid UID = FGuid::NewGuid());
-	FName GetUniqueID() const;
-	TSubclassOf<AActor> GetDynamicSpawnClass() const;
+	void SetIsDynamicSpawned(TSubclassOf<UObject> SpawnActor, FGuid UID = FGuid::NewGuid());
+	FString GetUniqueID() const;
+	TSubclassOf<UObject> GetDynamicSpawnClass() const;
 	bool GetIsDynamicSpawned() const;
-
-	void AddMigrateVersionLogic(const FString& Version,
-		const TFunction<FPropertyTuple(int,int,int, FPropertyTuple)>& MigrateLogic);
-	void Migrate(int MajorVersion, int MinorVersion, int PatchVersion, FPropertyTuple Properties);
+	
 
 	virtual void OnPreLoad();
 	virtual void OnPreSave();

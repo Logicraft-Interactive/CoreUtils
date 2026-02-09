@@ -4,19 +4,19 @@
 #include "SaveSystem/SavableActor.h"
 
 
-void ISavableActor::SetIsDynamicSpawned(TSubclassOf<AActor> SpawnActor, FGuid UID)
+void ISavableActor::SetIsDynamicSpawned(TSubclassOf<UObject> SpawnActor, FGuid UID)
 {
 	DynamicSpawnClass = SpawnActor;
-	UniqueID = *UID.ToString();
+	UniqueID = UID.ToString();
 	bIsDynamicSpawned = true;
 }
 
-FName ISavableActor::GetUniqueID() const
+FString ISavableActor::GetUniqueID() const
 {
-	return UniqueID;
+	return bIsDynamicSpawned ? UniqueID : _getUObject()->GetName();
 }
 
-TSubclassOf<AActor> ISavableActor::GetDynamicSpawnClass() const
+TSubclassOf<UObject> ISavableActor::GetDynamicSpawnClass() const
 {
 	return DynamicSpawnClass;
 }
@@ -32,12 +32,6 @@ void ISavableActor::AddMigrateVersionLogic(const FString& Version,
 	MigrateLogics.Add(Version, MigrateLogic);
 }
 
-void ISavableActor::Migrate(int MajorVersion, int MinorVersion, int PatchVersion, FPropertyTuple Properties)
-{
-	
-	
-	FPropertyTuple NewProperties = 
-}
 
 // Add default functionality here for any ISavableActor functions that are not pure virtual.
 void ISavableActor::OnPreLoad()

@@ -1,0 +1,30 @@
+﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
+
+
+#include "TestSavableActor.h"
+
+#include "TestSavableActorComponent.h"
+
+
+// Sets default values
+ATestSavableActor::ATestSavableActor()
+{
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+
+	SavableActorComponent = CreateDefaultSubobject<UTestSavableActorComponent>("Test Component");
+}
+
+// Called when the game starts or when spawned
+void ATestSavableActor::BeginPlay()
+{
+	Super::BeginPlay();
+	SetIsDynamicSpawned(GetClass());
+}
+
+// Called every frame
+void ATestSavableActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
+

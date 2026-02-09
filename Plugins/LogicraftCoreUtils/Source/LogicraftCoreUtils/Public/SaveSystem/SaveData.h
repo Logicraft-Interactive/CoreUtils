@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/SaveGame.h"
 #include "UObject/Object.h"
 #include "SaveData.generated.h"
 
@@ -26,6 +27,24 @@ struct FPropertySaveData
 };
 
 USTRUCT()
+struct FComponentSaveData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(SaveGame)
+	FString ComponentID;
+	
+	UPROPERTY(SaveGame)
+	FString SaveVersion {"1.0.0"};
+	
+	UPROPERTY(SaveGame)
+	TArray<FPropertySaveData> Properties;
+	
+	UPROPERTY(SaveGame)
+	int32 PropertiesCount{0};
+};
+
+USTRUCT()
 struct FObjectSaveData
 {
 	GENERATED_BODY()
@@ -37,18 +56,33 @@ struct FObjectSaveData
 	TSubclassOf<UObject> ObjectClass;
 
 	UPROPERTY(SaveGame)
-	int32 SaveVersion = 1;
+	FString SaveVersion {"1.0.0"};
 
 	UPROPERTY(SaveGame)
-	TArray<FObjectSaveData> Properties;
+	FTransform SpawnTransform;
+	
+	UPROPERTY(SaveGame)
+	bool bIsDynamicSpawned {false};
+
+	UPROPERTY(SaveGame)
+	TArray<FPropertySaveData> Properties;
+
+	UPROPERTY(SaveGame)
+	int32 PropertiesCount{0};
+	
+	UPROPERTY(SaveGame)
+	TArray<FComponentSaveData> Components;
+
+	UPROPERTY(SaveGame)
+	int32 ComponentsCount{0};
 };
 
 
-USTRUCT()
-struct LOGICRAFTCOREUTILS_API FSaveData
+UCLASS()
+class LOGICRAFTCOREUTILS_API ULCUSaveGame : public USaveGame
 {
 	GENERATED_BODY()
-
+public:
 	UPROPERTY(SaveGame)
 	FString GlobalSaveVersion = "1.0.0";
 
