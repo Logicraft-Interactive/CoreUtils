@@ -131,19 +131,21 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(ISavableActor* Savabl
 	{
 		return NullOpt;
 	}
-
+	//--------------------------------Init Actor------------------------------------------ 
 	SavableActor->OnPreSave();
 	
 	FObjectSaveData SaveData;
 	SaveData.bIsDynamicSpawned = SavableActor->GetIsDynamicSpawned();
 	SaveData.ObjectClass = SaveData.bIsDynamicSpawned ? SavableActor->GetDynamicSpawnClass() : TSubclassOf<UObject>(SavableActor->_getUObject()->GetClass());
 	SaveData.ObjectID = SavableActor->GetUniqueID();
-	SaveData.SaveVersion = Version;
+	SaveData.SaveVersion = SavableActor->GetVersion();
 	SaveData.SpawnTransform = Actor->GetTransform();
 	
 	UE_LOG(LogSaveSystem, Log, TEXT("Serializing %s (ID: %s, Version: %s)"), 
 		   *SaveData.ObjectClass->GetName(), *SaveData.ObjectID, *SaveData.SaveVersion);
-	
+
+	//--------------------------------Saving Property------------------------------------------ 
+
     for (TFieldIterator<FProperty> PropIt(SaveData.ObjectClass); PropIt; ++PropIt)
 	{
 		FProperty* Property = *PropIt;
@@ -174,6 +176,8 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(ISavableActor* Savabl
     	SaveData.Properties.Add(MoveTemp(PropertySaveData));
     	++SaveData.PropertiesCount;
 	}
+
+	//--------------------------------Saving Components------------------------------------------ 
 
 	for (auto Component : Actor->GetComponentsByInterface(USavableObject::StaticClass()))
 	{
@@ -240,7 +244,6 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 		Actor = World->SpawnActor(ObjectSaveData.ObjectClass);
 		Actor->SetActorTransform(ObjectSaveData.SpawnTransform);
 		SavableActor = Cast<ISavableActor>(Actor);
-		SavableActor->OnPreLoad();
 		
 		FGuid ActorGuid;
 		FGuid::Parse(ObjectSaveData.ObjectID,ActorGuid);
@@ -249,9 +252,34 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 	else
 	{
 		Actor = StaticSpawnedActorMap[ObjectSaveData.ObjectID];
+		if (!Actor)
+		{
+			UE_LOG(LogSaveSystem, Error, TEXT("Actor with id %s not found"), *ObjectSaveData.ObjectID);
+			return;
+		}
 		SavableActor = Cast<ISavableActor>(Actor);
 	}
+	SavableActor->OnPreLoad();
 
+	//--------------------------------Migrating logic------------------------------------------
+
+	if (FString FinalVersion = ISavableActor::Execute_BP_GetVersion(SavableActor->_getUObject()); FinalVersion != ObjectSaveData.SaveVersion)
+	{
+		FString CurrentVersion = ObjectSaveData.SaveVersion;
+		auto MigrateMap = SavableActor->GetMigrateDelegateMap();
+		while (CurrentVersion != FinalVersion)
+		{
+			if (!MigrateMap.Contains(CurrentVersion))
+			{
+				UE_LOG(LogSaveSystem, Error, TEXT("Missing migrating logic for the version %s of the object %s!"
+									  " Can't continue the loading of this object"), *CurrentVersion, *SavableActor->_getUObject()->GetClass()->GetName());
+				return;
+			}
+			CurrentVersion = MigrateMap[CurrentVersion](CurrentVersion, ObjectSaveData.Properties);
+		}
+	}
+
+	
 	//--------------------------------Property loading------------------------------------------ 
 	if (ObjectSaveData.Properties.Num() != ObjectSaveData.PropertiesCount)
 	{
@@ -267,7 +295,7 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 
 	//--------------------------------Component loading------------------------------------------ 
 	TMap<FString, UActorComponent*> ComponentsMap;
-	for (auto Component : Actor->GetComponents())
+	for (auto Component : Actor->GetComponentsByInterface(USavableObject::StaticClass()))
 	{
 		ComponentsMap.Add(Component->GetName(), Component);
 	}
@@ -282,6 +310,8 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 	for (auto ComponentSaveData : ObjectSaveData.Components)
 	{
 		auto Component = ComponentsMap[ComponentSaveData.ComponentID];
+		ISavableObject* SavableComponent = Cast<ISavableObject>(Component);
+		SavableComponent->OnPreLoad();
 		if (!Component)
 		{
 			continue;
@@ -291,40 +321,18 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 		{
 			AssignProperty(Component, SaveProp);
 		}
+		SavableComponent->OnPostLoad();
 	}
+
+	SavableActor->OnPostLoad();
 }
 
 
 
 
-FString FSaveSerializer::GetPropertyTypeString(FProperty* Property)
-{
-	if (Property->IsA<FIntProperty>())
-		return TEXT("int32");
-	if (Property->IsA<FFloatProperty>())
-		return TEXT("float");
-	if (Property->IsA<FBoolProperty>())
-		return TEXT("bool");
-	if (Property->IsA<FNameProperty>())
-		return TEXT("FName");
-	if (Property->IsA<FStrProperty>())
-		return TEXT("FString");
-	if (Property->IsA<FStructProperty>())
-	{
-		FStructProperty* StructProp = CastField<FStructProperty>(Property);
-		return FString::Printf(TEXT("struct:%s"), *StructProp->Struct->GetName());
-	}
-	if (Property->IsA<FObjectProperty>())
-	{
-		FObjectProperty* ObjProp = CastField<FObjectProperty>(Property);
-		return FString::Printf(TEXT("object:%s"), *ObjProp->PropertyClass->GetName());
-	}
-	if (Property->IsA<FArrayProperty>())
-	{
-		return TEXT("TArray");
-	}
-    
-	return TEXT("Unknown");
+FString FSaveSerializer::GetPropertyTypeString(const FProperty* Property)
+{    
+	return Property->GetCPPType();
 }
 
 void FSaveSerializer::SerializeProperty(FProperty* Property, void* ValuePtr, FPropertySaveData& OutSaveProp)

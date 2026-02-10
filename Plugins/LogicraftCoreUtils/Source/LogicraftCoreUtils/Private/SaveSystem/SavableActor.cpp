@@ -4,6 +4,15 @@
 #include "SaveSystem/SavableActor.h"
 
 
+void USavableActorStatics::AddMigrateDelegate(TScriptInterface<ISavableActor> Target, FString FromVersion,
+	FString ToVersion, FMigrateEventSignature Delegate)
+{
+	if (Target.GetInterface())
+	{
+		Target->AddMigrateDelegateNative(FromVersion, ToVersion, Delegate);
+	}
+}
+
 void ISavableActor::SetIsDynamicSpawned(TSubclassOf<UObject> SpawnActor, FGuid UID)
 {
 	DynamicSpawnClass = SpawnActor;
@@ -26,12 +35,26 @@ bool ISavableActor::GetIsDynamicSpawned() const
 	return bIsDynamicSpawned;
 }
 
-void ISavableActor::AddMigrateVersionLogic(const FString& Version,
-	const TFunction<FPropertyTuple(int, int, int, FPropertyTuple)>& MigrateLogic)
+FString ISavableActor::BP_GetVersion_Implementation()
 {
-	MigrateLogics.Add(Version, MigrateLogic);
+	return GetVersion();
 }
 
+void ISavableActor::AddMigrateDelegateNative(const FString& FromVersion, const FString& ToVersion,
+	const FMigrateEventSignature& Delegate)
+{
+	MigratesDelegateMap.Add(FromVersion, [=](auto FromVersion_, auto OldPropertyArray)
+	{
+		Delegate.ExecuteIfBound(FromVersion_, ToVersion, OldPropertyArray);
+		return ToVersion;
+	});
+}
+
+
+const ISavableActor::DelegateMapType& ISavableActor::GetMigrateDelegateMap()
+{
+	return MigratesDelegateMap;
+}
 
 // Add default functionality here for any ISavableActor functions that are not pure virtual.
 void ISavableActor::OnPreLoad()

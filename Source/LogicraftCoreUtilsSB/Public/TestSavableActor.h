@@ -9,6 +9,7 @@
 
 class UTestSavableActorComponent;
 
+
 UCLASS()
 class LOGICRAFTCOREUTILSSB_API ATestSavableActor : public AActor, public ISavableActor
 {
@@ -30,6 +31,11 @@ protected:
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UTestSavableActorComponent> SavableActorComponent;
+
+	UPROPERTY(EditAnywhere)
+	bool bDynamicSpawned = false;
+	
+	virtual FString GetVersion() override;
 
 public:
 	// Called every frame

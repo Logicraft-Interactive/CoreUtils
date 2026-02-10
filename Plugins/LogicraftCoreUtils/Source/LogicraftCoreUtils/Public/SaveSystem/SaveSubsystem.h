@@ -17,7 +17,7 @@ class ISavableActor;
 struct FSaveSerializer
 {
 private:
-	static FString GetPropertyTypeString(FProperty* Property);
+	static FString GetPropertyTypeString(const FProperty* Property);
 
 	static void SerializeProperty(FProperty* Property, void* ValuePtr, FPropertySaveData& OutSaveProp);
 

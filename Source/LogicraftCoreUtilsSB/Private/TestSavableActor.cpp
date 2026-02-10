@@ -3,6 +3,7 @@
 
 #include "TestSavableActor.h"
 
+#include "LogCategory.h"
 #include "TestSavableActorComponent.h"
 
 
@@ -13,13 +14,23 @@ ATestSavableActor::ATestSavableActor()
 	PrimaryActorTick.bCanEverTick = true;
 
 	SavableActorComponent = CreateDefaultSubobject<UTestSavableActorComponent>("Test Component");
+
+
 }
 
 // Called when the game starts or when spawned
 void ATestSavableActor::BeginPlay()
 {
 	Super::BeginPlay();
-	SetIsDynamicSpawned(GetClass());
+	if (bDynamicSpawned)
+	{
+		SetIsDynamicSpawned(GetClass());
+	}
+}
+
+FString ATestSavableActor::GetVersion()
+{
+		return "1.2.0";
 }
 
 // Called every frame

@@ -11,7 +11,7 @@
  * 
  */
 
-USTRUCT()
+USTRUCT(Blueprintable, BlueprintType)
 struct FPropertySaveData
 {
 	GENERATED_BODY()
