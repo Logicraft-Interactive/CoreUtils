@@ -6,6 +6,7 @@
 	"Description": "Plugin containing functions, classes, and structs that make Unreal C++ code more readable and simplify it in general.",
 	"Category": "Other",
 	"CreatedBy": "Logicraft Interactive",
+    "EngineVersion": "5.7.1",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "",
