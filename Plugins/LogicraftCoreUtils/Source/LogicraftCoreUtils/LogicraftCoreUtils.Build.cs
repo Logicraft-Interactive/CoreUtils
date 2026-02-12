@@ -25,7 +25,7 @@ public class LogicraftCoreUtils : ModuleRules
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"Core", "GameplayTags"
+				"Core", "GameplayTags", "Slate", "SlateCore", "InputCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -35,9 +35,7 @@ public class LogicraftCoreUtils : ModuleRules
 			new string[]
 			{
 				"CoreUObject",
-				"Engine",
-				"Slate",
-				"SlateCore",
+				"Engine"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
