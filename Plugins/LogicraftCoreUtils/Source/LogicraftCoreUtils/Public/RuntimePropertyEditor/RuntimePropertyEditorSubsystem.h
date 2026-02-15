@@ -17,13 +17,17 @@ class LOGICRAFTCOREUTILS_API URuntimePropertyEditorSubsystem : public UWorldSubs
 	GENERATED_BODY()
 	
 private:
-	using FEditableObjectList = TWeakObjectPtr<UObject>;
+	using FEditableObjectType = TWeakObjectPtr<UObject>;
 	
 	TSharedPtr<SWindow> RuntimePropertyEditorWindow;
 	TSharedPtr<SRuntimePropertyEditor> RuntimePropertyEditor;
 
-	TArray<FEditableObjectList> EditableObjects;
+	TArray<FEditableObjectType> EditableObjects;
+	TMap<FEditableObjectType, TSharedRef<SScrollBox>> EditableObjectsUIProperties;
+	
 public:
+	static ThisClass* Get(const UObject* WorldContext);
+	
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
@@ -32,7 +36,11 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void CloseWindow();
+	
+	void RegisterEditableProperties(const TScriptInterface<IRuntimeEditable>& RuntimeEditable);
 
-	UFUNCTION(BlueprintCallable)
-	void RegisterEditableProperties(TScriptInterface<IRuntimeEditable> EditableProperties);
+private:
+	TSharedRef<ITableRow> OnEditableObjectAdded(TWeakObjectPtr<> EditableObject, const TSharedRef<STableViewBase>& Owner);
+
+	void OnEditableObjectSelectionChanged(TWeakObjectPtr<> SelectedItem, ESelectInfo::Type SelectInfo);
 };

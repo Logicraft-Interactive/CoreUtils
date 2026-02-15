@@ -2,6 +2,16 @@
 
 #include "RuntimePropertyEditor/RuntimePropertyEditorSubsystem.h"
 
+URuntimePropertyEditorSubsystem::ThisClass* URuntimePropertyEditorSubsystem::Get(const UObject* WorldContext)
+{
+	if (const UWorld* World{ GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::LogAndReturnNull) })
+	{
+		return World->GetSubsystem<ThisClass>();
+	}
+
+	return nullptr;
+}
+
 void URuntimePropertyEditorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -24,6 +34,8 @@ void URuntimePropertyEditorSubsystem::OpenWindow()
 			[
 				SAssignNew(RuntimePropertyEditor, SRuntimePropertyEditor)
 					.EditableObjectList(&EditableObjects)
+					.OnEditableObjectAdded_UObject(this, &URuntimePropertyEditorSubsystem::OnEditableObjectAdded)
+					.OnEditableObjectSelectionChanged_UObject(this, &URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged)
 			];
 
 	if (RuntimePropertyEditorWindow.IsValid())
@@ -40,11 +52,40 @@ void URuntimePropertyEditorSubsystem::CloseWindow()
 	}
 }
 
-void URuntimePropertyEditorSubsystem::RegisterEditableProperties(TScriptInterface<IRuntimeEditable> EditableProperties)
+void URuntimePropertyEditorSubsystem::RegisterEditableProperties(const TScriptInterface<IRuntimeEditable>& RuntimeEditable)
 {
-	UObject* EditableObject{ EditableProperties.GetObject() };
-	if (ensureMsgf(EditableObject || IsValid(EditableObject), TEXT("A null EditableObject cannot be registered.")))
+	UObject* EditableObject{ RuntimeEditable.GetObject() };
+	if (ensureMsgf(EditableObject || IsValid(EditableObject), TEXT("A nullptr runtime editable cannot be registered.")))
 	{
-		RuntimePropertyEditor->AddEditableProperties(EditableObject);
+		EditableObjects.Add(EditableObject);
+	}
+}
+
+TSharedRef<ITableRow> URuntimePropertyEditorSubsystem::OnEditableObjectAdded(TWeakObjectPtr<> EditableObject,
+	const TSharedRef<STableViewBase>& Owner)
+{
+	auto* EditableObjectRawPtr{ EditableObject.Get() };
+
+	EditableObjectsUIProperties
+		.Add(EditableObject, RuntimePropertyEditor->MakeEditablePropertiesScrollBox(EditableObjectRawPtr));
+	
+	return SNew(STableRow<TWeakObjectPtr<>>, Owner)
+		[
+			SNew(STextBlock).Text(FText::FromString(EditableObjectRawPtr->GetName()))
+		];
+}
+
+void URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged(TWeakObjectPtr<> SelectedItem,
+	ESelectInfo::Type SelectInfo)
+{
+	if (!SelectedItem.IsValid())
+	{
+		RuntimePropertyEditor->DisplayPropertiesContainer(nullptr);
+		return;
+	}
+
+	if (const TSharedRef<SScrollBox>* PropertiesContainer{ EditableObjectsUIProperties.Find(SelectedItem) })
+	{
+		RuntimePropertyEditor->DisplayPropertiesContainer(*PropertiesContainer);
 	}
 }

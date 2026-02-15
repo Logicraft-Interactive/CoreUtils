@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "RuntimePropertyEditor/SRuntimePropertyEditor.h"
-#include "RuntimePropertyEditor/RuntimeEditable.h"
 
 void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 {
@@ -15,41 +14,51 @@ void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 		+ SSplitter::Slot()
 			.Value(50.f)
 			.MinSize(200.f)
-			.SizeRule(SSplitter::SizeToContent)
 			[
-				SNew(SListView<FListItemSource>)
+				SAssignNew(EditableObjectList, SListView<FListItemSource>)
 					.Orientation(Orient_Vertical)
 					.bEnableShadowBoxStyle(true)
 					.EnableAnimatedScrolling(true)
 					.ListItemsSource(Editable)
+					.SelectionMode(ESelectionMode::Single)
+					.OnGenerateRow(InArgs._OnEditableObjectAdded)
+					.OnSelectionChanged(InArgs._OnEditableObjectSelectionChanged)
 			]
 
 		+ SSplitter::Slot()
 			.Value(50.f)
 			.MinSize(200.f)
-			.SizeRule(SSplitter::SizeToContent)
 			[
-				SNew(STextBlock).Text(FText::FromString("Editable Properties"))
+				SAssignNew(EditablePropertiesPanel, SVerticalBox)
 			]
 	];
 }
 
-void SRuntimePropertyEditor::AddEditableProperties(UObject* EditableProperties)
+TSharedRef<SScrollBox> SRuntimePropertyEditor::MakeEditablePropertiesScrollBox(const TScriptInterface<IRuntimeEditable>& EditableProperties)
 {
-	if (!PropertyPanel.IsValid())
+	TSharedPtr<SScrollBox> PropertiesContainer;
+	SAssignNew(PropertiesContainer, SScrollBox)
+		.AnimateWheelScrolling(true)
+		.Orientation(Orient_Vertical);
+
+	EditableProperties->OnPropertiesDisplay(PropertiesContainer.ToSharedRef());
+	
+	return PropertiesContainer.ToSharedRef();
+}
+
+void SRuntimePropertyEditor::DisplayPropertiesContainer(const TSharedPtr<SScrollBox>& PropertiesContainer)
+{
+	EditablePropertiesPanel->ClearChildren();
+	
+	if (!PropertiesContainer.IsValid())
 	{
-		//TODO : Put an ensure.
 		return;
 	}
 
-	FString PropertyName;
-	IRuntimeEditable::Execute_OnPropertiesDisplay(EditableProperties, PropertyName);
-
-	PropertyPanel->AddSlot()
+	EditablePropertiesPanel->AddSlot()
+		.Padding(5.f)
 		.AutoHeight()
-		.Padding(50.f)
-			[
-				SNew(STextBlock)
-					.Text(FText::FromString(PropertyName))
-			];
+		[
+			PropertiesContainer.ToSharedRef()
+		];
 }
