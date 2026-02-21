@@ -29,5 +29,11 @@ void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder Pro
 				{
 					FVector CurrentLocation{ GetActorLocation() };
 					SetActorLocation({ NewValue, CurrentLocation.Y, CurrentLocation.Z });
-				});
+				})
+		.AddNumericVector<double, 3>(TEXT("Position"),
+				[this] { return GetActorLocation(); },
+				[this](const FVector& Position) { SetActorLocation(Position); })
+		.AddNumericRotator<double>(TEXT("Rotation"),
+				[this]{ return GetActorRotation(); },
+				[this](const FRotator& Rotator){ SetActorRotation(Rotator); });
 }
