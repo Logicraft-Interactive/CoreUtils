@@ -10,32 +10,67 @@ FRuntimePropertyBuilder::FRuntimePropertyBuilder(const TSharedRef<SScrollBox>& I
 {
 }
 
-FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddRowProperty(FStringView PropertyName,
-	const TSharedRef<SWidget>& PropertyWidget)
+FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddCategory(FStringView CategoryName)
+{
+	return
+		AddRowProperty(SNew(STextBlock)
+			.Justification(ETextJustify::Center)
+			.Font(FAppStyle::GetFontStyle("HeadingSmall"))
+			.Text(FText::FromStringView(CategoryName)));
+}
+
+FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddSeparator(const FSlateColor& ColorAndOpacity, float Thickness)
+{
+	return
+		AddRowProperty(
+			SNew(SSeparator)
+			.Orientation(Orient_Horizontal)
+			.ColorAndOpacity(ColorAndOpacity)
+			.Thickness(Thickness));
+}
+
+FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddRowProperty(const TSharedRef<SWidget>& PropertyWidget)
 {
 	PropertiesContainer->AddSlot()
-		.AutoSize()
+		.FillContentSize(1.f)
+		.Padding(5.f)
+			[
+				SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot()
+						.FillContentWidth(1.f)
+							[
+								PropertyWidget
+							]
+			];
+	
+	return *this;
+}
+
+FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddRowProperty(FStringView PropertyName,
+																const TSharedRef<SWidget>& PropertyWidget)
+{
+	PropertiesContainer->AddSlot()
+		.FillContentSize(1.f)
 		.Padding(5.f)
 		[
 			SNew(SHorizontalBox)
 				+ SHorizontalBox::Slot()
 					.AutoWidth()
+					.VAlign(VAlign_Center)
+					.Padding(0.f, 2.5f, 10.f, 2.5f)
 						[
 							SNew(STextBlock)
-								.Text(FText::FromString(PropertyName.GetData()))
+								.Text(FText::FromStringView(PropertyName))
+								.MinDesiredWidth(25.f)
 						]
-
+			
 				+ SHorizontalBox::Slot()
-					.AutoWidth()
+					.FillWidth(1.f)
+					.VAlign(VAlign_Center)
 						[
 							PropertyWidget
 						]
 		];
 	
 	return *this;
-}
-
-TSharedRef<SScrollBox> FRuntimePropertyBuilder::GetPropertiesContainer() const
-{
-	return PropertiesContainer.ToSharedRef();
 }

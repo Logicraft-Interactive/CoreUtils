@@ -3,9 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Widgets/Input/SButton.h"
+#include "Widgets/Input/SCheckBox.h"
+#include "Widgets/Input/SRotatorInputBox.h"
 #include "Widgets/Input/SSpinBox.h"
 #include "Widgets/Input/SVectorInputBox.h"
-#include "Widgets/Input/SRotatorInputBox.h"
+#include "Widgets/Layout/SSeparator.h"
 
 /**
  * 
@@ -16,13 +19,7 @@ public:
 	FRuntimePropertyBuilder() = default;
 	FRuntimePropertyBuilder(const TSharedRef<SScrollBox>& InPropertiesContainer);
 	~FRuntimePropertyBuilder() = default;
-
-	//Rotator.
-	//Bool
-	//Button
-	//Separator
-	//Category
-
+	
 	template<typename TNumeric, typename TOnValueGet, typename TOnValueSet>
 		requires
 			std::is_arithmetic_v<TNumeric> &&
@@ -47,12 +44,12 @@ public:
 		using FVectorType = UE::Math::TVector<TNumeric>;
 		using SVectorWidget = SNumericVectorInputBox<TNumeric, FVectorType, NumberOfComponents>;
 
-		#define ON_VALUE_CHANGED_COMP(Comp, ...)				     \
+		#define ON_VALUE_CHANGED_COMP(Comp, ...)						 \
 		On##Comp##Changed_Lambda([OnValueGet, OnValueSet](TNumeric Comp) \
-		{										     \
-			FVectorType OldVector{ OnValueGet() };			     \
-			OnValueSet({ __VA_ARGS__ });					     \
-		})										     \
+		{														 		 \
+			FVectorType OldVector{ OnValueGet() };			     		 \
+			OnValueSet({ __VA_ARGS__ });					     		 \
+		})														 		 \
 		
 		return
 			AddRowProperty(PropertyName,
@@ -105,9 +102,47 @@ public:
 		#undef ON_VALUE_SET_COMP
 	}
 
-	FRuntimePropertyBuilder& AddRowProperty(FStringView PropertyName, const TSharedRef<SWidget>& PropertyWidget);
+	template<typename TOnValueGet, typename TOnValueSet>
+		requires
+			std::invocable<TOnValueSet, bool> &&
+			std::same_as<std::invoke_result_t<TOnValueGet>, bool>
+	FRuntimePropertyBuilder& AddBool(FStringView PropertyName, TOnValueGet&& OnValueGet, TOnValueSet&& OnValueSet)
+	{
+		return
+			AddRowProperty(PropertyName,
+				SNew(SCheckBox)
+				.IsChecked_Lambda([OnValueGet]
+				{
+					return OnValueGet() ? ECheckBoxState::Checked : ECheckBoxState::Unchecked;
+				})
+				.OnCheckStateChanged_Lambda([OnValueSet](ECheckBoxState CheckBoxState)
+				{
+					OnValueSet(CheckBoxState == ECheckBoxState::Checked);
+				}));
+	}
 
-	TSharedRef<SScrollBox> GetPropertiesContainer() const;
+	template<typename TOnClicked>
+		requires
+			std::invocable<TOnClicked>
+	FRuntimePropertyBuilder& AddButton(FStringView PropertyName, TOnClicked&& OnClicked)
+	{
+		return
+			AddRowProperty(
+				SNew(SButton)
+				.Text(FText::FromStringView(PropertyName))
+				.OnClicked_Lambda([OnClicked]
+				{
+					OnClicked();
+					return FReply::Handled();
+				}));
+	}
+
+	FRuntimePropertyBuilder& AddCategory(FStringView CategoryName);
+
+	FRuntimePropertyBuilder& AddSeparator(const FSlateColor& ColorAndOpacity, float Thickness);
+
+	FRuntimePropertyBuilder& AddRowProperty(const TSharedRef<SWidget>& PropertyWidget);
+	FRuntimePropertyBuilder& AddRowProperty(FStringView PropertyName, const TSharedRef<SWidget>& PropertyWidget);
 private:
 	TSharedPtr<SScrollBox> PropertiesContainer;
 };

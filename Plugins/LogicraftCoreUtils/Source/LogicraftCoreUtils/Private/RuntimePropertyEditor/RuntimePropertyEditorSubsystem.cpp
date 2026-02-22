@@ -16,7 +16,11 @@ void URuntimePropertyEditorSubsystem::Initialize(FSubsystemCollectionBase& Colle
 {
 	Super::Initialize(Collection);
 
-	OpenWindow();
+	const UWorld* World{ GetWorld() };
+	if (World && World->IsGameWorld())
+	{
+		OpenWindow();
+	}
 }
 
 void URuntimePropertyEditorSubsystem::Deinitialize()

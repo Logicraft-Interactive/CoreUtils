@@ -39,6 +39,8 @@ TSharedRef<SScrollBox> SRuntimePropertyEditor::MakeEditablePropertiesScrollBox(c
 	TSharedPtr<SScrollBox> PropertiesContainer;
 	SAssignNew(PropertiesContainer, SScrollBox)
 		.AnimateWheelScrolling(true)
+		.ScrollBarAlwaysVisible(true)
+		.EnableTouchScrolling(true)
 		.Orientation(Orient_Vertical);
 
 	EditableProperties->OnPropertiesDisplay(PropertiesContainer.ToSharedRef());
@@ -57,7 +59,7 @@ void SRuntimePropertyEditor::DisplayPropertiesContainer(const TSharedPtr<SScroll
 
 	EditablePropertiesPanel->AddSlot()
 		.Padding(5.f)
-		.AutoHeight()
+		.FillHeight(1.f)
 		[
 			PropertiesContainer.ToSharedRef()
 		];

@@ -20,7 +20,7 @@ void ATestRuntimePropertyEditor::BeginPlay()
 void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder PropertiesBuilder)
 {
 	PropertiesBuilder
-		.AddRowProperty(TEXT("Random Text"),
+		.AddRowProperty(
 			SNew(STextBlock)
 				.Text(FText::FromString("Editable Property")))
 		.AddNumeric<double>(TEXT("X Value"),
@@ -35,5 +35,10 @@ void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder Pro
 				[this](const FVector& Position) { SetActorLocation(Position); })
 		.AddNumericRotator<double>(TEXT("Rotation"),
 				[this]{ return GetActorRotation(); },
-				[this](const FRotator& Rotator){ SetActorRotation(Rotator); });
+				[this](const FRotator& Rotator){ SetActorRotation(Rotator); })
+		.AddBool(TEXT("Check"),
+				[this]() -> bool { return bIsEditorOnlyActor; },
+				[this](bool Value){ bIsEditorOnlyActor = Value; })
+		.AddSeparator(FColor::Black, 5.f)
+		.AddCategory(TEXT("Category"));
 }
