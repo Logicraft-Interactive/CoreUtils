@@ -18,5 +18,5 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	virtual void OnPropertiesDisplay(FRuntimePropertyBuilder PropertiesBuilder) override;
+	virtual void OnPropertiesDisplay(FRuntimePropertyBuilder& PropertiesBuilder) override;
 };

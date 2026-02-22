@@ -4,7 +4,6 @@
 
 void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 {
-	const TArray<FListItemSource>* Editable { InArgs.GetEditableObjectList().ArrayPointer };
 	ChildSlot
 	[
 		SNew(SSplitter)
@@ -17,9 +16,9 @@ void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 			[
 				SAssignNew(EditableObjectList, SListView<FListItemSource>)
 					.Orientation(Orient_Vertical)
-					.bEnableShadowBoxStyle(true)
+					//.bEnableShadowBoxStyle(true)
 					.EnableAnimatedScrolling(true)
-					.ListItemsSource(Editable)
+					.ListItemsSource(InArgs._EditableObjectList)
 					.SelectionMode(ESelectionMode::Single)
 					.OnGenerateRow(InArgs._OnEditableObjectAdded)
 					.OnSelectionChanged(InArgs._OnEditableObjectSelectionChanged)
@@ -43,7 +42,8 @@ TSharedRef<SScrollBox> SRuntimePropertyEditor::MakeEditablePropertiesScrollBox(c
 		.EnableTouchScrolling(true)
 		.Orientation(Orient_Vertical);
 
-	EditableProperties->OnPropertiesDisplay(PropertiesContainer.ToSharedRef());
+	FRuntimePropertyBuilder RuntimePropertyBuilder{ PropertiesContainer.ToSharedRef() };
+	EditableProperties->OnPropertiesDisplay(RuntimePropertyBuilder);
 	
 	return PropertiesContainer.ToSharedRef();
 }

@@ -21,6 +21,6 @@ class LOGICRAFTCOREUTILS_API IRuntimeEditable
 	GENERATED_BODY()
 
 public:
-	virtual void OnPropertiesDisplay(FRuntimePropertyBuilder PropertiesBuilder)
+	virtual void OnPropertiesDisplay(FRuntimePropertyBuilder& PropertiesBuilder)
 		PURE_VIRTUAL(IRuntimeEditable::OnPropertiesDisplay, )
 };

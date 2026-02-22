@@ -17,7 +17,7 @@ void ATestRuntimePropertyEditor::BeginPlay()
 	URuntimePropertyEditorSubsystem::Get(this)->RegisterEditableProperties(this);
 }
 
-void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder PropertiesBuilder)
+void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder& PropertiesBuilder)
 {
 	PropertiesBuilder
 		.AddRowProperty(

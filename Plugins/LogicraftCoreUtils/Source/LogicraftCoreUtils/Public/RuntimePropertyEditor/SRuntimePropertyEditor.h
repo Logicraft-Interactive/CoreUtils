@@ -24,7 +24,7 @@ public:
 		SLATE_EVENT(FOnEditableObjectAdded, OnEditableObjectAdded)
 		SLATE_EVENT(FOnEditableObjectSelectionChanged, OnEditableObjectSelectionChanged)
 		
-		SLATE_ITEMS_SOURCE_ARGUMENT(FListItemSource, EditableObjectList)
+		SLATE_ARGUMENT(const TArray<FListItemSource>*, EditableObjectList)
 		
 	SLATE_END_ARGS()
 		

@@ -54,7 +54,7 @@ public:
 		return
 			AddRowProperty(PropertyName,
 				SNew(SVectorWidget)
-					.bColorAxisLabels(true)
+					//.bColorAxisLabels(true)
 					.AllowSpin(true)
 					.Vector_Lambda(OnValueGet)
 					.PreventThrottling(true)
@@ -89,7 +89,7 @@ public:
 			AddRowProperty(PropertyName,
 				SNew(SRotatorWidget)
 				.AllowSpin(true)
-				.bColorAxisLabels(true)
+				//.bColorAxisLabels(true)
 				.PreventThrottling(true)
 				.ON_VALUE_SET_COMP(Pitch)
 				.ON_VALUE_SET_COMP(Yaw) 

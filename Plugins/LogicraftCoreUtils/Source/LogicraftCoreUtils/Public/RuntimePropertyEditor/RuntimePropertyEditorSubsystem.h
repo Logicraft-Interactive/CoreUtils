@@ -22,7 +22,7 @@ private:
 	TSharedPtr<SWindow> RuntimePropertyEditorWindow;
 	TSharedPtr<SRuntimePropertyEditor> RuntimePropertyEditor;
 
-	TArray<FEditableObjectType> EditableObjects;
+	TSharedPtr<TArray<FEditableObjectType>> EditableObjects;
 	TMap<FEditableObjectType, TSharedRef<SScrollBox>> EditableObjectsUIProperties;
 	
 public:

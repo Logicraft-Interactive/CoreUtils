@@ -15,7 +15,7 @@ FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddCategory(FStringView Catego
 	return
 		AddRowProperty(SNew(STextBlock)
 			.Justification(ETextJustify::Center)
-			.Font(FAppStyle::GetFontStyle("HeadingSmall"))
+			//.Font(FAppStyle::GetFontStyle("HeadingSmall"))
 			.Text(FText::FromStringView(CategoryName)));
 }
 
@@ -32,7 +32,7 @@ FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddSeparator(const FSlateColor
 FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddRowProperty(const TSharedRef<SWidget>& PropertyWidget)
 {
 	PropertiesContainer->AddSlot()
-		.FillContentSize(1.f)
+		.AutoSize()
 		.Padding(5.f)
 			[
 				SNew(SHorizontalBox)
@@ -50,7 +50,7 @@ FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddRowProperty(FStringView Pro
 																const TSharedRef<SWidget>& PropertyWidget)
 {
 	PropertiesContainer->AddSlot()
-		.FillContentSize(1.f)
+		.AutoSize()
 		.Padding(5.f)
 		[
 			SNew(SHorizontalBox)
