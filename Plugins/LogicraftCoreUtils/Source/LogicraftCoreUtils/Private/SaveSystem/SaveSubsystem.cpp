@@ -1,4 +1,4 @@
-﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
+// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 
 #include "SaveSystem/SaveSubsystem.h"
@@ -9,6 +9,66 @@
 #include "SaveSystem/SavableActor.h"
 #include "SaveSystem/SavableObject.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
+
+namespace SaveSystemUtils
+{
+	/**
+	 * UHT exec thunks for BlueprintNativeEvent on UInterfaces use an incorrect
+	 * C-style cast (UObject* → IInterface*) that doesn't account for multiple
+	 * inheritance pointer offsets. ProcessEvent works fine for Blueprint overrides
+	 * (which bypass the C++ thunk entirely), but fails for C++ _Implementation().
+	 *
+	 * These helpers check if the function has a Blueprint override (non-native):
+	 *   - Blueprint override → ProcessEvent (correct dispatch via Blueprint VM)
+	 *   - Native C++ → direct call via properly-cast interface pointer
+	 */
+
+	static FString GetVersion(UObject* Obj, ISavableActor* Iface)
+	{
+		UFunction* Func = Obj->FindFunction(FName(TEXT("GetVersion")));
+		if (Func && !Func->HasAnyFunctionFlags(FUNC_Native))
+		{
+			struct { FString ReturnValue; } Parms;
+			Obj->ProcessEvent(Func, &Parms);
+			return Parms.ReturnValue;
+		}
+		return Iface->GetVersion_Implementation();
+	}
+
+	static FString GetVersion(UObject* Obj, ISavableObject* Iface)
+	{
+		UFunction* Func = Obj->FindFunction(FName(TEXT("GetVersion")));
+		if (Func && !Func->HasAnyFunctionFlags(FUNC_Native))
+		{
+			struct { FString ReturnValue; } Parms;
+			Obj->ProcessEvent(Func, &Parms);
+			return Parms.ReturnValue;
+		}
+		return Iface->GetVersion_Implementation();
+	}
+
+	static void SetupSaveMigrateLogic(UObject* Obj, ISavableActor* Iface)
+	{
+		UFunction* Func = Obj->FindFunction(FName(TEXT("SetupSaveMigrateLogic")));
+		if (Func && !Func->HasAnyFunctionFlags(FUNC_Native))
+		{
+			Obj->ProcessEvent(Func, nullptr);
+			return;
+		}
+		Iface->SetupSaveMigrateLogic_Implementation();
+	}
+
+	static void SetupSaveMigrateLogic(UObject* Obj, ISavableObject* Iface)
+	{
+		UFunction* Func = Obj->FindFunction(FName(TEXT("SetupSaveMigrateLogic")));
+		if (Func && !Func->HasAnyFunctionFlags(FUNC_Native))
+		{
+			Obj->ProcessEvent(Func, nullptr);
+			return;
+		}
+		Iface->SetupSaveMigrateLogic_Implementation();
+	}
+}
 
 void USaveSubsystem::SaveWorld(const FName& SlotName, const FString& Version)
 {
@@ -35,7 +95,7 @@ void USaveSubsystem::SaveWorld(const FName& SlotName, const FString& Version)
 
 	for (auto SavableActor : SavableActors)
 	{
-		if (auto ActorData = FSaveSerializer::SerializeActor(Cast<ISavableActor>(SavableActor), Version))
+		if (auto ActorData = FSaveSerializer::SerializeActor(Cast<ISavableActor>(SavableActor)))
 		{
 			CurrentSave->ObjectsData.Add(MoveTemp(*ActorData));
 		}		
@@ -118,8 +178,34 @@ TMap<FString, AActor*> USaveSubsystem::BuildStaticActorSpawnedMap() const
 	return ActorMap;
 }
 
+void USaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+	for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
+	{
+		UClass* CurrentClass = *ClassIterator;
+        
+		if (CurrentClass && CurrentClass->ImplementsInterface(USavableActor::StaticClass()))
+		{
+			UObject* CDO = CurrentClass->GetDefaultObject();
+			if (ISavableActor* Iface = Cast<ISavableActor>(CDO))
+			{
+				SaveSystemUtils::SetupSaveMigrateLogic(CDO, Iface);
+			}
+		}
+		else if (CurrentClass && CurrentClass->ImplementsInterface(USavableObject::StaticClass()))
+		{
+			UObject* CDO = CurrentClass->GetDefaultObject();
+			if (ISavableObject* Iface = Cast<ISavableObject>(CDO))
+			{
+				SaveSystemUtils::SetupSaveMigrateLogic(CDO, Iface);
+			}
+		}
+	}
+}
 
-TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(ISavableActor* SavableActor, FString Version)
+
+TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(ISavableActor* SavableActor)
 {
 	if (!IsValid(SavableActor->_getUObject()))
 	{
@@ -138,7 +224,7 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(ISavableActor* Savabl
 	SaveData.bIsDynamicSpawned = SavableActor->GetIsDynamicSpawned();
 	SaveData.ObjectClass = SaveData.bIsDynamicSpawned ? SavableActor->GetDynamicSpawnClass() : TSubclassOf<UObject>(SavableActor->_getUObject()->GetClass());
 	SaveData.ObjectID = SavableActor->GetUniqueID();
-	SaveData.SaveVersion = SavableActor->GetVersion();
+	SaveData.SaveVersion = SaveSystemUtils::GetVersion(Actor, SavableActor);
 	SaveData.SpawnTransform = Actor->GetTransform();
 	
 	UE_LOG(LogSaveSystem, Log, TEXT("Serializing %s (ID: %s, Version: %s)"), 
@@ -187,7 +273,7 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(ISavableActor* Savabl
     	UE_LOG(LogSaveSystem, Verbose, TEXT("  - Found Savable Component: %s"), *Component->GetName());
 		FComponentSaveData ComponentSaveData;
 
-		ComponentSaveData.SaveVersion = Version;
+		ComponentSaveData.SaveVersion = SaveSystemUtils::GetVersion(Component, SavableComponent);
 		ComponentSaveData.ComponentID = Component->GetName();
 		
 		for (TFieldIterator<FProperty> PropIt(Component->GetClass()); PropIt; ++PropIt)
@@ -263,10 +349,11 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 
 	//--------------------------------Migrating logic------------------------------------------
 
-	if (FString FinalVersion = ISavableActor::Execute_BP_GetVersion(SavableActor->_getUObject()); FinalVersion != ObjectSaveData.SaveVersion)
+
+	if (FString FinalVersion = SaveSystemUtils::GetVersion(Actor, SavableActor); FinalVersion != ObjectSaveData.SaveVersion)
 	{
 		FString CurrentVersion = ObjectSaveData.SaveVersion;
-		auto MigrateMap = SavableActor->GetMigrateDelegateMap();
+		auto MigrateMap = ISavableActor::GetMigrateDelegateMap(Actor);
 		while (CurrentVersion != FinalVersion)
 		{
 			if (!MigrateMap.Contains(CurrentVersion))
@@ -275,7 +362,7 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 									  " Can't continue the loading of this object"), *CurrentVersion, *SavableActor->_getUObject()->GetClass()->GetName());
 				return;
 			}
-			CurrentVersion = MigrateMap[CurrentVersion](CurrentVersion, ObjectSaveData.Properties);
+			CurrentVersion = MigrateMap[CurrentVersion](Actor, CurrentVersion, ObjectSaveData.Properties);
 		}
 	}
 
@@ -310,13 +397,30 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 	for (auto ComponentSaveData : ObjectSaveData.Components)
 	{
 		auto Component = ComponentsMap[ComponentSaveData.ComponentID];
-		ISavableObject* SavableComponent = Cast<ISavableObject>(Component);
-		SavableComponent->OnPreLoad();
 		if (!Component)
 		{
 			continue;
 		}
-
+		ISavableObject* SavableComponent = Cast<ISavableObject>(Component);
+		SavableComponent->OnPreLoad();
+	
+		
+		if (FString FinalVersion = SaveSystemUtils::GetVersion(Component, SavableComponent); FinalVersion != ComponentSaveData.SaveVersion)
+		{
+			FString CurrentVersion = ComponentSaveData.SaveVersion;
+			auto MigrateMap = ISavableObject::GetMigrateDelegateMap(Component);
+			while (CurrentVersion != FinalVersion)
+			{
+				if (!MigrateMap.Contains(CurrentVersion))
+				{
+					UE_LOG(LogSaveSystem, Error, TEXT("Missing migrating logic for the version %s of the component %s!"
+										  " Can't continue the loading of this component"), *CurrentVersion, *Component->_getUObject()->GetClass()->GetName());
+					break;
+				}
+				CurrentVersion = MigrateMap[CurrentVersion](Component, CurrentVersion, ComponentSaveData.Properties);
+			}
+		}
+		
 		for (auto SaveProp : ComponentSaveData.Properties)
 		{
 			AssignProperty(Component, SaveProp);

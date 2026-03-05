@@ -26,7 +26,8 @@ protected:
 
 	UPROPERTY(SaveGame)
 	double StuffTwo = 3516512.2151;
-	
+
+	virtual void SetupSaveMigrateLogic_Implementation() override;
 public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType,

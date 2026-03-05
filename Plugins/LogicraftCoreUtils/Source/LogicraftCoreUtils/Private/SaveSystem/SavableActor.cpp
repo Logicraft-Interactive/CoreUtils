@@ -1,11 +1,11 @@
-﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
+// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 
 #include "SaveSystem/SavableActor.h"
 
 
 void USavableActorStatics::AddMigrateDelegate(TScriptInterface<ISavableActor> Target, FString FromVersion,
-	FString ToVersion, FMigrateEventSignature Delegate)
+	FString ToVersion, FActorMigrateEventSignature Delegate)
 {
 	if (Target.GetInterface())
 	{
@@ -35,26 +35,38 @@ bool ISavableActor::GetIsDynamicSpawned() const
 	return bIsDynamicSpawned;
 }
 
-FString ISavableActor::BP_GetVersion_Implementation()
-{
-	return GetVersion();
-}
-
 void ISavableActor::AddMigrateDelegateNative(const FString& FromVersion, const FString& ToVersion,
-	const FMigrateEventSignature& Delegate)
+	const FActorMigrateEventSignature& Delegate)
 {
-	MigratesDelegateMap.Add(FromVersion, [=](auto FromVersion_, auto OldPropertyArray)
+	UClass* Class = Cast<UObject>(this)->GetClass();
+	if (!Class)
 	{
-		Delegate.ExecuteIfBound(FromVersion_, ToVersion, OldPropertyArray);
+		return;
+	}
+		
+	if (!MigratesDelegateMap.Find(Class))
+	{
+		MigratesDelegateMap.Add(Class);
+	}
+	
+	MigratesDelegateMap[Class].Add(FromVersion, [=](auto Actor, auto FromVersion_, auto OldPropertyArray)
+	{
+		Delegate.ExecuteIfBound(Actor, FromVersion_, ToVersion, OldPropertyArray);
 		return ToVersion;
 	});
 }
 
 
-const ISavableActor::DelegateMapType& ISavableActor::GetMigrateDelegateMap()
+
+const ISavableActor::FDelegateMapType& ISavableActor::GetMigrateDelegateMap(UObject* This)
 {
-	return MigratesDelegateMap;
+	if (MigratesDelegateMap.Find(This->GetClass()))
+	{
+		return MigratesDelegateMap[This->GetClass()];
+	}
+	return EmptyMap;
 }
+
 
 // Add default functionality here for any ISavableActor functions that are not pure virtual.
 void ISavableActor::OnPreLoad()

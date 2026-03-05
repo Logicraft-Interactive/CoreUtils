@@ -35,7 +35,9 @@ protected:
 	UPROPERTY(EditAnywhere)
 	bool bDynamicSpawned = false;
 	
-	virtual FString GetVersion() override;
+	virtual FString GetVersion_Implementation() override;
+
+	virtual void SetupSaveMigrateLogic_Implementation() override;
 
 public:
 	// Called every frame

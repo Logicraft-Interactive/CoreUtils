@@ -28,9 +28,13 @@ void ATestSavableActor::BeginPlay()
 	}
 }
 
-FString ATestSavableActor::GetVersion()
+FString ATestSavableActor::GetVersion_Implementation()
 {
 		return "1.2.0";
+}
+
+void ATestSavableActor::SetupSaveMigrateLogic_Implementation()
+{
 }
 
 // Called every frame

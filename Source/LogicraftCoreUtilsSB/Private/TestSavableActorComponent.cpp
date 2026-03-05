@@ -25,6 +25,10 @@ void UTestSavableActorComponent::BeginPlay()
 }
 
 
+void UTestSavableActorComponent::SetupSaveMigrateLogic_Implementation()
+{
+}
+
 // Called every frame
 void UTestSavableActorComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                                                FActorComponentTickFunction* ThisTickFunction)
