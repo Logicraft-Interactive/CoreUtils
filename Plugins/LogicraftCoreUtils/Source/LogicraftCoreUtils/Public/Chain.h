@@ -8,6 +8,8 @@
 #include <type_traits>
 #include <functional>
 
+#include "Meta/LCUConcepts.h"
+
 /**
  * @brief Namespace containing utilities for safe method chaining on UObjects (Monadic pattern).
  * This pattern allows executing sequences of operations where validity checks (IsValid)
@@ -20,13 +22,6 @@ namespace Chain
        // Helper to get the raw type without pointers, const, or volatile qualifiers.
        template<typename T>
        using CleanType = std::remove_pointer_t<std::remove_cvref_t<T>>;
-       
-       // Concept to ensure the template type is derived from UObject.
-       template<typename T>
-       concept IsUObject = std::is_base_of_v<UObject, CleanType<T>>;
-
-       template<typename Func, typename T>
-       concept IsCallable = std::invocable<Func, T>;
          
        // Internal logging function to handle error reporting (implemented in cpp).
        void LOGICRAFTCOREUTILS_API ChainLog(const FString& Msg);
@@ -38,7 +33,7 @@ namespace Chain
         *
         * @tparam T The type of UObject being wrapped.
         */
-       template<IsUObject T>
+       template<Concept::DerivedFromObject T>
        class TChain
        {
        private:
@@ -120,7 +115,7 @@ namespace Chain
            * @param SourceLocation Automatically captures the file and line number for logging.
            * @return TChain& Returns a reference to self to allow further method chaining.
            */
-          template<IsCallable<T*> Func>
+          template<Concept::Invocable<T*> Func>
           TChain Execute(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
@@ -143,7 +138,7 @@ namespace Chain
            * @param SourceLocation Automatically captures the file and line number.
            * @return TChain<NewType> A new chain wrapping the result of the function.
            */
-          template<IsCallable<T*> Func>
+          template<Concept::Invocable<T*> Func>
           auto Transform(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           -> TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
           {  
@@ -170,7 +165,7 @@ namespace Chain
            * @param SourceLocation Context for logging.
            * @return ReturnType The result of the function or the DefaultValue.
            */
-          template<IsCallable<T*> Func, typename ReturnType = std::invoke_result_t<Func, T*>>
+          template<Concept::Invocable<T*> Func, typename ReturnType = std::invoke_result_t<Func, T*>>
           TOptional<ReturnType> GetValue(Func&& Function, const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
@@ -188,7 +183,7 @@ namespace Chain
            * @tparam NewType The UObject derived class to cast to.
            * @return TChain<NewType> A new chain wrapping the casted object (or nullptr if failed).
            */
-          template<IsUObject NewType>
+          template<Concept::DerivedFromObject NewType>
           TChain<NewType> Cast(const std::source_location& SourceLocation = std::source_location::current())
           {
              if (!CanChain())
@@ -225,7 +220,7 @@ namespace Chain
            *
            * @param Function A void callable taking no arguments.
            */
-          template<IsCallable<T*> Func>
+          template<Concept::Invocable<T*> Func>
           void Else(Func&& Function)
           {
              if (!CanChain())
@@ -242,7 +237,7 @@ namespace Chain
      * @param bThrowWarning Whether to log warnings if the object becomes invalid during the chain.
      * @return Private::TChain<T> A new chain instance.
      */
-    template<Private::IsUObject T> 
+    template<Concept::DerivedFromObject T> 
     Private::TChain<T> StartChain(T* Object, bool bThrowWarning = true)
     {
        return Private::TChain<T>(Object, bThrowWarning);
@@ -254,7 +249,7 @@ namespace Chain
      * @param bThrowWarning Whether to log warnings if the object becomes invalid.
      * @return Private::TChain<T> A new chain instance.
      */
-    template<Private::IsUObject T> 
+    template<Concept::DerivedFromObject T> 
     Private::TChain<T> StartChain(T& Object, bool bThrowWarning = true)
     {
        return Private::TChain<T>(Object, bThrowWarning);
@@ -270,7 +265,7 @@ namespace Chain
      * @param bThrowWarning Whether to log warnings if the object becomes invalid.
      * @param SourceLocation Automatically captures the file and line number.
      */
-    template<Private::IsUObject T, Private::IsCallable<T*> Func>
+    template<Concept::DerivedFromObject T, Concept::Invocable<T*> Func>
     void Execute(T* Object, Func&& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
     {
        StartChain(Object, bThrowWarning).Execute(Forward<Func>(Function), SourceLocation);
@@ -286,7 +281,7 @@ namespace Chain
      * @param SourceLocation Automatically captures the file and line number.
      * @return Private::TChain<NewType> A chain wrapping the result.
      */
-   template<Private::IsUObject T, Private::IsCallable<T*> Func>
+   template<Concept::DerivedFromObject T, Concept::Invocable<T*> Func>
      auto Transform(T* Object, Func&& Function, bool bThrowWarning = true, const std::source_location& SourceLocation = std::source_location::current())
      -> Private::TChain<std::remove_pointer_t<std::invoke_result_t<Func, T*>>>
     {

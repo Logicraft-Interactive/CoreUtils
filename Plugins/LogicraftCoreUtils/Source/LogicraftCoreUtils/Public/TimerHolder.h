@@ -6,21 +6,10 @@
 #include "TimerManager.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/TimerHandle.h"
+#include "Meta/LCUConcepts.h"
 #include "GameFramework/Actor.h"
 
-namespace Concepts
-{
-	template <typename Ty>
-	concept DerivedFromActor = std::derived_from<Ty, AActor>;
-
-	template <typename Ty>
-	concept DerivedFromObject = std::derived_from<Ty, UObject>;
-
-	template<typename TCallable, typename ...TArgs>
-	concept Invocable = std::invocable<TCallable, TArgs...>;
-} // Concepts
-
-namespace TypeTraits
+namespace TypeTrait
 {
 	template<typename TCallable, typename ...TArgs>
 	static constexpr bool IsInvocable_V = std::is_invocable_v<TCallable, TArgs...>;
@@ -57,8 +46,8 @@ public:
 		return TimerHandle;
 	}
 
-	template <Concepts::DerivedFromObject TObject, typename TMethod>
-		requires Concepts::Invocable<TMethod, TObject>
+	template <Concept::DerivedFromObject TObject, typename TMethod>
+		requires Concept::Invocable<TMethod, TObject>
 	FTimerHandle Schedule(TObject* Object, TMethod&& TimerCallback, const FTimerParameters TimerParameters)
 	{
 		if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))

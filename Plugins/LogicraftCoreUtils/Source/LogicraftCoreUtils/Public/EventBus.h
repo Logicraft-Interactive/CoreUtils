@@ -4,71 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Meta/LCUConcepts.h"
 #include "Subsystems/GameInstanceSubsystem.h"
+#include "Meta/LCUTypeTraits.h"
 #include "EventBus.generated.h"
-
-namespace TypeTraits
-{
-	template<typename ...TArgs>
-	struct TArgsTrait
-	{
-		using FArgs = TTuple<TArgs...>;
-
-		template<size_t Index>
-		using TArg = TTupleElement<Index, FArgs>;
-	};
-
-	template<typename Type>
-	struct TFunctionTraits : TFunctionTraits<decltype(&Type::operator())>
-	{};
-
-	template<typename TReturn, typename TClass, typename ...TArgs>
-	struct TFunctionTraits<TReturn (TClass::*)(TArgs...)>
-	{
-		static constexpr bool bIsClass{ true };
-		static constexpr bool bIsConst{ false };
-
-		using FReturnType = TReturn;
-		using FClassType = TClass;
-		using FArgsType = TArgsTrait<TArgs...>::FArgs;
-
-		template<size_t Index>
-		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>::Type;
-
-		using FFunctionType = TReturn (TClass::*)(TArgs...);
-	};
-
-	template<typename TReturn, typename TClass, typename ...TArgs>
-	struct TFunctionTraits<TReturn (TClass::*)(TArgs...) const>
-	{
-		static constexpr bool bIsClass{ true };
-		static constexpr bool bIsConst{ true };
-
-		using FReturnType = TReturn;
-		using FClassType = TClass;
-		using FArgsType = TArgsTrait<TArgs...>::FArgs;
-
-		template<size_t Index>
-		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>::Type;
-
-		using FFunctionType = TReturn (TClass::*)(TArgs...) const;
-	};
-
-	template<typename TReturn, typename ...TArgs>
-	struct TFunctionTraits<TReturn (*)(TArgs...)>
-	{
-		static constexpr bool bIsClass{ false };
-		static constexpr bool bIsConst{ false };
-
-		using FReturnType = TReturn;
-		using FArgsType = TArgsTrait<TArgs...>::FArgs;
-
-		template<size_t Index>
-		using TArgType = TArgsTrait<TArgs...>::template TArg<Index>::Type;
-
-		using FFunctionType = TReturn (*)(TArgs...);
-	};
-} // TypeTraits
 
 struct IEventContainerBase
 {
@@ -159,15 +98,6 @@ namespace EventBus
 		template<typename TMemberFunction, typename ...TArgs>
 		constexpr static bool TIsFunctor_V = TIsFunctor<TMemberFunction, TArgs...>::bValue;
 
-		template<typename>
-		struct TIsDelegate : std::false_type {};
-
-		template<typename TReturn, typename ...TArgs>
-		struct TIsDelegate<TDelegate<TReturn(TArgs...)>> : std::true_type {};
-
-		template<typename Type>
-		constexpr static bool bIsDelegate_V = TIsDelegate<Type>::value;
-
 		template<typename ...TArgs>
 		struct FContainerTypeFor
 		{
@@ -192,13 +122,10 @@ namespace EventBus
 	
 	namespace Concepts
 	{
-		template<typename Type>
-		concept IsDelegate = TypeTraits::bIsDelegate_V<typename TRemoveReference<Type>::Type>;
-
 		template<typename TFunctor>
 		concept IsFunctor =
 			TypeTraits::TIsFunctor_V<
-				decltype(&TFunctor::operator()), typename ::TypeTraits::TFunctionTraits<TFunctor>::FArgsType>;
+				decltype(&TFunctor::operator()), typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>;
 	} // Concepts
 } // EventBus
 
@@ -241,7 +168,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag, UserObject, Function](ThisClass* EventBus)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
 			[UserObject, Function](auto& EventContainer)
 			{
 				return EventContainer.MulticastDelegate.AddUObject(UserObject, Function);
@@ -316,7 +243,7 @@ public:
 	 * @param   GameplayTag  Associated gameplay tag.
 	 * @param   Delegate	 The delegate to add.
 	 */
-	template<EventBus::Concepts::IsDelegate TDelegate>
+	template<Concept::IsDelegate TDelegate>
 	static FDelegateHandle Add(const UObject* WorldContext, const FGameplayTag& GameplayTag, TDelegate&& Delegate)
 	{
 		return Internal_ExecuteOnValidContext(WorldContext,
@@ -348,7 +275,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag, UserObject]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
 			[UserObject]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
 			{
 				return EventContainer.MulticastDelegate.AddWeakLambda(UserObject, Forward<TCallbackFunctor>(CallbackFunctor));
@@ -372,7 +299,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
 			[]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
 			{
 				return EventContainer.MulticastDelegate.AddLambda(Forward<TCallbackFunctor>(CallbackFunctor));
@@ -400,7 +327,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag, UserObject, Function](ThisClass* EventBus)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
 			[UserObject, Function](auto& EventContainer)
 			{
 				return EventContainer.MulticastDelegate.AddRaw(UserObject, Function);
@@ -425,7 +352,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag, &UserObjectRef, Function](ThisClass* EventBus)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
 			[&UserObjectRef, Function](auto& EventContainer)
 			{
 				if constexpr (Mode == ESPMode::ThreadSafe)
@@ -474,7 +401,7 @@ public:
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag, UserObjectRef]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
 			[&UserObjectRef]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
 			{
 				return EventContainer.MulticastDelegate.AddSPLambda(UserObjectRef, Forward<TCallbackFunctor>(CallbackFunctor));
@@ -492,13 +419,13 @@ public:
 	 * @param   Function	 Function pointer
 	 */
 	template<typename TFunction>
-		requires !TypeTraits::TFunctionTraits<TFunction>::bIsClass
+		requires !TypeTrait::TFunctionTraits<TFunction>::bIsClass
 	static FDelegateHandle AddStatic(const UObject* WorldContext, const FGameplayTag& GameplayTag, TFunction Function)
 	{
 		return Internal_ExecuteOnValidContext(WorldContext,
 		[&GameplayTag, Function](ThisClass* EventBus)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTraits::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
+			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
 			[Function](auto& EventContainer)
             {
             	return EventContainer.MulticastDelegate.AddStatic(Function);
