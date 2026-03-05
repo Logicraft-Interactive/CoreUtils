@@ -13,11 +13,14 @@ namespace Concept
 
 	// Checks if the type inherits from UObject (standard for UE Garbage Collection)
 	template <typename Ty>
-	concept DerivedFromObject = std::derived_from<Ty, UObject>;
+	concept DerivedFromObject = std::derived_from<Ty, UObject>
+	|| std::is_convertible_v<Ty, UObject*>;
+	
 
 	// Checks if the type inherits from AActor (can be placed in the world)
 	template <typename Ty>
-	concept DerivedFromActor = std::derived_from<Ty, AActor>;
+	concept DerivedFromActor = std::derived_from<Ty, AActor>
+	|| std::is_convertible_v<Ty, AActor*>;
 
 	// Checks if TCallable can be invoked with the arguments TArgs...
 	// This is a C++20 standard wrapper, very useful for validating callbacks.
