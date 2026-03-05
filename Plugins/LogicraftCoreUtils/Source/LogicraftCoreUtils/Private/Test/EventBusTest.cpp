@@ -153,7 +153,7 @@ void FEventBusSpec::Define()
             bool bSecondListenerRun = false;
             UEventBus::AddLambda(TestWorld, TestTag, [&](int32){ bSecondListenerRun = true; });
             
-            UEventBus::Broadcast(TestWorld, TestTag, 123);
+            UEventBus::Broadcast(TestWorld, TestTag, 123, 10.f);
 
             TestTrue("Helper ran", Helper->bDidRun);
             TestTrue("Second listener ran", bSecondListenerRun);

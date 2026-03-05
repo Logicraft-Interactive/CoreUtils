@@ -7,7 +7,46 @@
 #include "Meta/LCUConcepts.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "Meta/LCUTypeTraits.h"
+#include <string_view>
 #include "EventBus.generated.h"
+
+template <typename T>
+consteval std::basic_string_view<TCHAR> GetTypeNameAsString()
+{
+	using FString_View_TChar = std::basic_string_view<TCHAR>;
+	
+#if defined(__clang__)
+	constexpr FString_View_TChar Function = TEXT(__PRETTY_FUNCTION__);
+	constexpr auto Prefix = TEXT("std::basic_string_view<TCHAR> GetTypeNameAsString() [T = ");
+	constexpr auto Suffix = TEXT("]");
+#elif defined(__GNUC__)
+	constexpr FString_View_TChar Function = std::basic_string_view<TCHAR>(TEXT(__PRETTY_FUNCTION__));
+	constexpr auto Prefix = TEXT("[with T = ");
+	constexpr auto Suffix = TEXT(";");
+#elif defined(_MSC_VER)
+	constexpr FString_View_TChar Function = TEXT(__FUNCSIG__);
+	constexpr auto Prefix = TEXT("GetTypeNameAsString<");
+	constexpr auto Suffix = TEXT(">(void)");
+#else
+	return TEXT("Unknown compiler");
+#endif
+	
+	constexpr auto StartLoc = Function.find(Prefix);
+	if constexpr (StartLoc == FString_View_TChar::npos)
+	{
+		return TEXT("ErrorParsing");
+	}
+
+	constexpr auto Start = StartLoc + std::char_traits<TCHAR>::length(Prefix);
+	constexpr auto End = Function.find(Suffix, Start);
+    
+	if constexpr (End == FString_View_TChar::npos)
+	{
+		return Function.substr(Start);
+	}
+
+	return Function.substr(Start, End - Start);
+}
 
 struct IEventContainerBase
 {
@@ -27,13 +66,15 @@ struct IEventContainerBase
 
 	virtual void SetLockedSignature(bool InLockedSignature) = 0;
 	virtual bool GetLockedSignature() const = 0;
+
+	virtual FString GetTypesName() const = 0;
 };
 
-template<typename ...Args>
+template<typename ...TArgs>
 struct TEventContainer final : IEventContainerBase
 {
 	int32 SubscriberCount{ 0 };
-	TMulticastDelegate<void(Args...)> MulticastDelegate;
+	TMulticastDelegate<void(TArgs...)> MulticastDelegate;
 	bool bLockedSignature{ false };
 
 	static const void* StaticGetTypeID()
@@ -71,6 +112,25 @@ struct TEventContainer final : IEventContainerBase
 
 	virtual void SetLockedSignature(bool InLockedSignature) override { bLockedSignature = InLockedSignature; }
 	virtual bool GetLockedSignature() const override { return bLockedSignature; }
+
+	static FString StaticGetTypesName()
+	{
+		TArray<FString> TypeNames;
+		
+		([&]
+		{
+			constexpr auto View = GetTypeNameAsString<TArgs>();
+			
+			TypeNames.Emplace(FString(View.length(), View.data()));
+		}(), ...);
+		
+		return FString::Join(TypeNames, TEXT(", "));
+	}
+	
+	virtual FString GetTypesName() const override
+	{
+		return StaticGetTypesName();
+	}
 };
 
 namespace EventBus
@@ -451,9 +511,7 @@ public:
 
 			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 			{
-				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
-				const auto ActualTypeId = BaseEventContainer->GetTypeID();
-				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("The gameplay tag already has an assigned signature.")))
+				if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("The gameplay tag already has an assigned signature.")))
 				{
 					BaseEventContainer->SetLockedSignature(true);
 				}
@@ -493,9 +551,7 @@ public:
 		{
 			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 			{
-				const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
-				const auto ActualTypeId = BaseEventContainer->GetTypeID();
-				if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to broadcast a callback with those types of arguments.")))
+				if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("Unable to broadcast a callback with those types of arguments.")))
 				{
 					auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
 					EventContainer.MulticastDelegate.Broadcast(InArgs...);
@@ -601,9 +657,7 @@ private:
 		
 		if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 		{
-			const auto ExpectedTypeId = FEventContainerType::StaticGetTypeID();
-			const auto ActualTypeId = BaseEventContainer->GetTypeID();
-			if (ensureMsgf(ActualTypeId == ExpectedTypeId, TEXT("Unable to add a callback of a different type.")))
+			if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("Unable to add a callback of a different type.")))
 			{
 				auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
 				const FDelegateHandle DelegateHandle{ Callable(EventContainer, Forward<TArgs>(Args)...) };
@@ -638,4 +692,20 @@ private:
 	TSharedPtr<IEventContainerBase> Internal_Find(const FGameplayTag& GameplayTag) const;
 
 	bool Internal_Remove(const FGameplayTag& GameplayTag);
+
+	template<typename TExpectedType>
+	static bool Internal_CheckTypesID(
+		const TSharedPtr<IEventContainerBase>& ActualType,
+		const FStringView EnsureMessage,
+		const std::source_location& SourceLocation = std::source_location::current())
+	{
+		return ensureMsgf(
+			TExpectedType::StaticGetTypeID() == ActualType->GetTypeID(),								  					    
+				TEXT("%s\n"
+			 		"[Given Types: %s]\n"  										  					  		
+			 		"[Wanted Types: %s]"),
+			 		EnsureMessage.GetData(),								  					  		
+			 		*TExpectedType::StaticGetTypesName(), 											  					  	
+			 		*ActualType->GetTypesName());
+	}
 };
