@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include <concepts>
 #include <algorithm> // Required for Algo::Sort
+#include "Meta/LCUTypeTraits.h"
+#include "Meta/LCUConcepts.h"
 
 /**
  * @namespace Linq
@@ -15,49 +17,6 @@ namespace Linq
 {
 	namespace Private
 	{
-		namespace Concept
-		{
-			// C++20 Concepts to constrain template types used in the library.
-
-			/**
-			 * @brief Ensures the type derives from UObject.
-			 */
-			template <typename Ty>
-			concept DerivedFromObject = std::derived_from<Ty, UObject>;
-
-			// --- Type Traits for TMap detection ---
-			
-			template <template <typename...> class Container, typename Args>
-			struct TIsInstantiation : std::false_type
-			{
-			};
-
-			template <template<typename...> class Container ,typename... Args>
-			struct TIsInstantiation<Container,Container<Args...>> : std::true_type
-			{
-			};
-
-			template <template<typename...> class Container ,typename T>
-			inline constexpr bool TIsInstantiation_v = TIsInstantiation<Container, std::remove_cvref_t<T>>::value;
-
-			// --- Helper to deduce Value Types (Key-Value pairs for Maps, ElementType for Arrays/Sets) ---
-
-			template <typename C, typename = void>
-			struct TContainerValueType
-			{
-				using Type = typename C::ElementType;
-			};
-
-			template <typename... Args>
-			struct TContainerValueType<TMap<Args...>>
-			{
-				using Type = TPair<typename TMap<Args...>::KeyType, typename TMap<Args...>::ValueType>;
-			};
-
-			template <typename C>
-			using TContainerValueType_t = typename TContainerValueType<std::remove_reference_t<C>>::Type;
-		}
-
 		/**
 		 * @struct TStorageTraits
 		 * @brief Helper struct to determine how to store intermediate values in iterators.
@@ -1201,7 +1160,7 @@ namespace Linq
 			 * @brief Materializes the sequence into a TMap (assuming elements are Pairs).
 			 */
 			template <typename K = decltype(std::declval<T>().Key), typename V = decltype(std::declval<T>().Value)>
-				requires Concept::TIsInstantiation_v<TTuple, T>
+				requires TypeTrait::bIsInstantiation_V<TTuple, T>
 			TMap<K, V> ToMap()
 			{
 				TMap<K, V> Result;
@@ -1275,7 +1234,7 @@ namespace Linq
 	auto Start(ContainerType&& Source)
 	{
 		using CleanContainerType = std::remove_cvref_t<ContainerType>;
-		using ValueType = Private::Concept::TContainerValueType_t<CleanContainerType>;
+		using ValueType = TypeTrait::TContainerValueType_T<CleanContainerType>;
 		if constexpr (std::is_lvalue_reference_v<ContainerType>)
 		{
 			using FIteratorType = Private::TLValueSourceIterator<
