@@ -1,9 +1,8 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 
-#include "RuntimePropertyEditor/FRuntimePropertyBuilder.h"
-
-#include "Widgets/Input/SSpinBox.h"
+#include "RuntimePropertyEditor/RuntimePropertyBuilder.h"
+#include "RuntimePropertyEditor/SlateFontStyleHelper.h"
 
 FRuntimePropertyBuilder::FRuntimePropertyBuilder(const TSharedRef<SScrollBox>& InPropertiesContainer)
 	: PropertiesContainer(InPropertiesContainer)
@@ -15,7 +14,7 @@ FRuntimePropertyBuilder& FRuntimePropertyBuilder::AddCategory(FStringView Catego
 	return
 		AddRowProperty(SNew(STextBlock)
 			.Justification(ETextJustify::Center)
-			//.Font(FAppStyle::GetFontStyle("HeadingSmall"))
+			.Font(SlateFontStyleHelper::GetSlateFontStyle(TEXT("Roboto-Bold.ttf"), 16))
 			.Text(FText::FromStringView(CategoryName)));
 }
 

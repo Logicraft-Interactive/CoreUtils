@@ -1,7 +1,6 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "RuntimePropertyEditor/RuntimePropertyEditorSubsystem.h"
-#include "Engine/GameEngine.h"
 
 URuntimePropertyEditorSubsystem::ThisClass* URuntimePropertyEditorSubsystem::Get(const UObject* WorldContext)
 {
@@ -16,10 +15,6 @@ URuntimePropertyEditorSubsystem::ThisClass* URuntimePropertyEditorSubsystem::Get
 void URuntimePropertyEditorSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-
-	EditableObjects = MakeShared<TArray<FEditableObjectType>>();
-
-	//OpenWindow();
 }
 
 void URuntimePropertyEditorSubsystem::Deinitialize()
@@ -41,19 +36,10 @@ void URuntimePropertyEditorSubsystem::OpenWindow()
 			.ClientSize({ 1920.f / 2.f, 1080.f / 2.f })
 			[
 				SAssignNew(RuntimePropertyEditor, SRuntimePropertyEditor)
-					.EditableObjectList(EditableObjects.Get())
+					.EditableObjectList(&EditableObjects)
 					.OnEditableObjectAdded_UObject(this, &URuntimePropertyEditorSubsystem::OnEditableObjectAdded)
 					.OnEditableObjectSelectionChanged_UObject(this, &URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged)
 			];
-	
-	// UGameEngine* GameEngine = Cast<UGameEngine>(GEngine);
-	// if (GameEngine && GameEngine->GameViewport && GameEngine->GameViewport->GetWindow().IsValid())
-	// {
-	// 	FSlateApplication::Get().AddWindowAsNativeChild(
-	// 		RuntimePropertyEditorWindow.ToSharedRef(), 
-	// 		GameEngine->GameViewport->GetWindow().ToSharedRef()
-	// 	);
-	// }
 	
 	if (RuntimePropertyEditorWindow.IsValid())
 	{ 
@@ -69,12 +55,12 @@ void URuntimePropertyEditorSubsystem::CloseWindow()
 	}
 }
 
-void URuntimePropertyEditorSubsystem::RegisterEditableProperties(const TScriptInterface<IRuntimeEditable>& RuntimeEditable)
+void URuntimePropertyEditorSubsystem::RegisterEditableObject(const TScriptInterface<IRuntimeEditable>& RuntimeEditable)
 {
 	UObject* EditableObject{ RuntimeEditable.GetObject() };
 	if (ensureMsgf(EditableObject || IsValid(EditableObject), TEXT("A nullptr runtime editable cannot be registered.")))
 	{
-		EditableObjects->Add(EditableObject);
+		EditableObjects.Add(EditableObject);
 	}
 }
 
@@ -86,7 +72,7 @@ TSharedRef<ITableRow> URuntimePropertyEditorSubsystem::OnEditableObjectAdded(TWe
 		auto* EditableObjectRawPtr{ EditableObject.Get() };
 	
 		EditableObjectsUIProperties
-			.Add(EditableObject, RuntimePropertyEditor->MakeEditablePropertiesScrollBox(EditableObjectRawPtr));
+			.Add(EditableObject, RuntimePropertyEditor->MakeEditablePropertiesWidget(EditableObjectRawPtr));
 	
 		return SNew(STableRow<TWeakObjectPtr<>>, Owner)
 			[
@@ -105,12 +91,12 @@ void URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged(TWeakObje
 {
 	if (!SelectedItem.IsValid())
 	{
-		RuntimePropertyEditor->DisplayPropertiesContainer(nullptr);
+		RuntimePropertyEditor->DisplayObjectProperties(nullptr);
 		return;
 	}
 
 	if (const TSharedRef<SScrollBox>* PropertiesContainer{ EditableObjectsUIProperties.Find(SelectedItem) })
 	{
-		RuntimePropertyEditor->DisplayPropertiesContainer(*PropertiesContainer);
+		RuntimePropertyEditor->DisplayObjectProperties(*PropertiesContainer);
 	}
 }

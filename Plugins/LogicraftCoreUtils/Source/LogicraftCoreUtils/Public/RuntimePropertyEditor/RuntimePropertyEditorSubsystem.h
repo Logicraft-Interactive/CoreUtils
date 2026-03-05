@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RuntimeEditable.h"
-#include "SRuntimePropertyEditor.h"
+#include "RuntimePropertyEditor.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "RuntimePropertyEditorSubsystem.generated.h"
 
@@ -22,7 +22,7 @@ private:
 	TSharedPtr<SWindow> RuntimePropertyEditorWindow;
 	TSharedPtr<SRuntimePropertyEditor> RuntimePropertyEditor;
 
-	TSharedPtr<TArray<FEditableObjectType>> EditableObjects;
+	TArray<FEditableObjectType> EditableObjects;
 	TMap<FEditableObjectType, TSharedRef<SScrollBox>> EditableObjectsUIProperties;
 	
 public:
@@ -37,7 +37,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CloseWindow();
 	
-	void RegisterEditableProperties(const TScriptInterface<IRuntimeEditable>& RuntimeEditable);
+	void RegisterEditableObject(const TScriptInterface<IRuntimeEditable>& RuntimeEditable);
 
 private:
 	TSharedRef<ITableRow> OnEditableObjectAdded(TWeakObjectPtr<> EditableObject, const TSharedRef<STableViewBase>& Owner);

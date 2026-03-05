@@ -15,7 +15,7 @@ DECLARE_DELEGATE_TwoParams(FOnEditableObjectSelectionChanged, TWeakObjectPtr<> S
  */
 class LOGICRAFTCOREUTILS_API SRuntimePropertyEditor : public SCompoundWidget
 {
-	using FListItemSource = TWeakObjectPtr<UObject>;
+	using FListItemSource = TWeakObjectPtr<>;
 	using SEditableObjectListView = SListView<FListItemSource>;
 	
 public:
@@ -30,9 +30,9 @@ public:
 		
 	void Construct(const FArguments& InArgs);
 
-	TSharedRef<SScrollBox> MakeEditablePropertiesScrollBox(const TScriptInterface<IRuntimeEditable>& EditableProperties);
+	TSharedRef<SScrollBox> MakeEditablePropertiesWidget(const TScriptInterface<IRuntimeEditable>& EditableProperties);
 
-	void DisplayPropertiesContainer(const TSharedPtr<SScrollBox>& PropertiesContainer);
+	void DisplayObjectProperties(const TSharedPtr<SScrollBox>& PropertiesContainer);
 
 private:
 	TSharedPtr<SEditableObjectListView> EditableObjectList;

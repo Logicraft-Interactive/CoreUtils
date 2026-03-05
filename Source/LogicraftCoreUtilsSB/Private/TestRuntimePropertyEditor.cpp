@@ -3,7 +3,7 @@
 
 #include "TestRuntimePropertyEditor.h"
 #include "RuntimePropertyEditor/RuntimePropertyEditorSubsystem.h"
-#include "Widgets/Input/SVectorInputBox.h"
+#include "RuntimePropertyEditor/RuntimePropertyHelper.h"
 
 ATestRuntimePropertyEditor::ATestRuntimePropertyEditor()
 {
@@ -14,7 +14,7 @@ void ATestRuntimePropertyEditor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	URuntimePropertyEditorSubsystem::Get(this)->RegisterEditableProperties(this);
+	URuntimePropertyHelper::RegisterEditableObject(this, this);
 }
 
 void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder& PropertiesBuilder)
@@ -25,7 +25,7 @@ void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder& Pr
 				.Text(FText::FromString("Editable Property")))
 		.AddNumeric<double>(TEXT("X Value"),
 				[this]{ return GetActorLocation().X; },
-				[this](float NewValue)
+				[this](double NewValue)
 				{
 					FVector CurrentLocation{ GetActorLocation() };
 					SetActorLocation({ NewValue, CurrentLocation.Y, CurrentLocation.Z });

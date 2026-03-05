@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "FRuntimePropertyBuilder.h"
+#include "RuntimePropertyBuilder.h"
 #include "UObject/Interface.h"
 #include "RuntimeEditable.generated.h"
 

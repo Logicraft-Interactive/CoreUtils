@@ -1,6 +1,6 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
-#include "RuntimePropertyEditor/SRuntimePropertyEditor.h"
+#include "RuntimePropertyEditor/RuntimePropertyEditor.h"
 
 void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 {
@@ -16,7 +16,6 @@ void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 			[
 				SAssignNew(EditableObjectList, SListView<FListItemSource>)
 					.Orientation(Orient_Vertical)
-					//.bEnableShadowBoxStyle(true)
 					.EnableAnimatedScrolling(true)
 					.ListItemsSource(InArgs._EditableObjectList)
 					.SelectionMode(ESelectionMode::Single)
@@ -33,7 +32,7 @@ void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 	];
 }
 
-TSharedRef<SScrollBox> SRuntimePropertyEditor::MakeEditablePropertiesScrollBox(const TScriptInterface<IRuntimeEditable>& EditableProperties)
+TSharedRef<SScrollBox> SRuntimePropertyEditor::MakeEditablePropertiesWidget(const TScriptInterface<IRuntimeEditable>& EditableProperties)
 {
 	TSharedPtr<SScrollBox> PropertiesContainer;
 	SAssignNew(PropertiesContainer, SScrollBox)
@@ -48,7 +47,7 @@ TSharedRef<SScrollBox> SRuntimePropertyEditor::MakeEditablePropertiesScrollBox(c
 	return PropertiesContainer.ToSharedRef();
 }
 
-void SRuntimePropertyEditor::DisplayPropertiesContainer(const TSharedPtr<SScrollBox>& PropertiesContainer)
+void SRuntimePropertyEditor::DisplayObjectProperties(const TSharedPtr<SScrollBox>& PropertiesContainer)
 {
 	EditablePropertiesPanel->ClearChildren();
 	
