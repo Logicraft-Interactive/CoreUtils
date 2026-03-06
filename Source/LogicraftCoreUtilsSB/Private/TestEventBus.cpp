@@ -19,13 +19,13 @@ void ATestEventBus::BeginPlay()
 {
 	Super::BeginPlay();
 
-	Handle = UEventBus::AddLambda(this, Test_Actor_Bus, [](float a){});
-	UEventBus::Broadcast(this, Test_Actor_Bus, 10, 10.f);
+	Handle = UEventBus::AddLambda(Test_Actor_Bus, [](float a){});
+	UEventBus::Broadcast(Test_Actor_Bus, 10, 10.f);
 }
 
 void ATestEventBus::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	UEventBus::Remove(this, Test_Actor_Bus, Handle);
+	UEventBus::Remove(Test_Actor_Bus, Handle);
 }
