@@ -1,0 +1,9 @@
+{
+	"id": "SaveSystem",
+	"name": "SaveSystem",
+	"enabledTests": [
+		"Project.SaveSystem.Performance",
+		"Project.SaveSystem.VersionMigration",
+		"Project.SaveSystem.VersionMigrationChain"
+	]
+}

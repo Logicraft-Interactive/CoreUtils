@@ -7,3 +7,4 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogLCU, Warning, Warning)
 DECLARE_LOG_CATEGORY_EXTERN(LogEventBus, Warning, Warning)
+DECLARE_LOG_CATEGORY_EXTERN(LogSaveSystem, Warning, Warning)
