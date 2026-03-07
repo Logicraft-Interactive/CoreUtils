@@ -2,6 +2,8 @@
 
 #include "RuntimePropertyEditor/RuntimePropertyEditorSubsystem.h"
 
+#include "RuntimePropertyEditor/RuntimePropertyEditorSettings.h"
+
 URuntimePropertyEditorSubsystem::ThisClass* URuntimePropertyEditorSubsystem::Get(const UObject* WorldContext)
 {
 	if (const UWorld* World{ GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::LogAndReturnNull) })
@@ -29,8 +31,20 @@ void URuntimePropertyEditorSubsystem::Deinitialize()
 	EditableObjectsUIProperties.Empty();
 }
 
+void URuntimePropertyEditorSubsystem::OnWorldBeginPlay(UWorld& InWorld)
+{
+	Super::OnWorldBeginPlay(InWorld);
+
+	SpawnSelectionBox(InWorld);
+}
+
 void URuntimePropertyEditorSubsystem::OpenWindow()
 {
+	if (RuntimePropertyEditorWindow.IsValid())
+	{
+		return;
+	}
+	
 	SAssignNew(RuntimePropertyEditorWindow, SWindow)
 		.Title(FText::FromString(TEXT("RuntimePropertyEditor")))
 			.ClientSize({ 1920.f / 2.f, 1080.f / 2.f })
@@ -89,14 +103,77 @@ TSharedRef<ITableRow> URuntimePropertyEditorSubsystem::OnEditableObjectAdded(TWe
 void URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged(TWeakObjectPtr<> SelectedItem,
 	ESelectInfo::Type SelectInfo)
 {
+	if (SelectedActor.IsValid())
+	{
+		SelectedActor->GetRootComponent()->TransformUpdated.RemoveAll(this);
+		SelectedActor.Reset();
+		
+		SelectionBox->SetActorHiddenInGame(true);
+	}
+	
 	if (!SelectedItem.IsValid())
 	{
 		RuntimePropertyEditor->DisplayObjectProperties(nullptr);
 		return;
 	}
 
+	if (AActor* Actor = Cast<AActor>(SelectedItem.Get()))
+	{
+		if (!SelectionBox.IsValid())
+		{
+			SpawnSelectionBox(*GetWorld());
+		}
+		
+		SelectedActor = Actor;
+		SelectedActor->GetRootComponent()->TransformUpdated.AddUObject(
+			this, &URuntimePropertyEditorSubsystem::OnSelectedActorTransformUpdated);
+
+		SelectionBox->SetActorTransform(Actor->GetTransform());
+		SelectionBox->SetActorScale3D(SelectionBox->GetActorScale3D() + FVector{ 0.1 });
+		SelectionBox->SetActorHiddenInGame(false);
+	}
+
 	if (const TSharedRef<SScrollBox>* PropertiesContainer{ EditableObjectsUIProperties.Find(SelectedItem) })
 	{
 		RuntimePropertyEditor->DisplayObjectProperties(*PropertiesContainer);
 	}
+}
+
+void URuntimePropertyEditorSubsystem::OnSelectedActorTransformUpdated(USceneComponent* UpdatedComponent,
+	EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
+{
+	if (!SelectionBox.IsValid())
+	{
+		SpawnSelectionBox(*GetWorld());
+	}
+
+	SelectionBox->SetActorTransform(UpdatedComponent->GetRelativeTransform());
+	SelectionBox->SetActorScale3D(SelectionBox->GetActorScale3D() + FVector{ 0.1 });
+}
+
+void URuntimePropertyEditorSubsystem::SpawnSelectionBox(UWorld& InWorld)
+{
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Name = TEXT("RuntimePropertyEditorSelectionBox");
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
+	SelectionBox = InWorld.SpawnActor<AActor>(SpawnParameters);
+	
+	SelectionBoxMesh = Cast<UStaticMeshComponent>(
+		SelectionBox->AddComponentByClass(
+				UStaticMeshComponent::StaticClass(),
+				false,
+				FTransform::Identity,
+				false
+		));
+
+	auto* Settings{ URuntimePropertyEditorSettings::Get() };
+
+	UStaticMesh* SelectionMesh = Settings->SelectionMesh.LoadSynchronous();
+	UMaterialInstance* SelectionMaterial = Settings->SelectionMaterial.LoadSynchronous();
+	
+	SelectionBoxMesh->SetStaticMesh(SelectionMesh);
+	SelectionBoxMesh->SetMaterial(0, SelectionMaterial);
+
+	SelectionBox->SetActorHiddenInGame(true);
 }

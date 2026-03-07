@@ -24,12 +24,17 @@ private:
 
 	TArray<FEditableObjectType> EditableObjects;
 	TMap<FEditableObjectType, TSharedRef<SScrollBox>> EditableObjectsUIProperties;
-	
+
+	TWeakObjectPtr<AActor> SelectionBox;
+	TWeakObjectPtr<UStaticMeshComponent> SelectionBoxMesh;
+	TWeakObjectPtr<AActor> SelectedActor;
 public:
 	static ThisClass* Get(const UObject* WorldContext);
 	
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
+
+	virtual void OnWorldBeginPlay(UWorld& InWorld) override;
 	
 	UFUNCTION(BlueprintCallable)
 	void OpenWindow();
@@ -43,4 +48,9 @@ private:
 	TSharedRef<ITableRow> OnEditableObjectAdded(TWeakObjectPtr<> EditableObject, const TSharedRef<STableViewBase>& Owner);
 
 	void OnEditableObjectSelectionChanged(TWeakObjectPtr<> SelectedItem, ESelectInfo::Type SelectInfo);
+
+	void OnSelectedActorTransformUpdated(USceneComponent* UpdatedComponent, EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport);
+
+	void SpawnSelectionBox(UWorld& InWorld);
+
 };

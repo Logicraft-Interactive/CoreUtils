@@ -40,5 +40,8 @@ void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder& Pr
 				[this]() -> bool { return bIsEditorOnlyActor; },
 				[this](bool Value){ bIsEditorOnlyActor = Value; })
 		.AddSeparator(FColor::Black, 5.f)
-		.AddCategory(TEXT("Category"));
+		.AddCategory(TEXT("Category"))
+		.AddNumericVector<double, 3>(TEXT("Scale"),
+			[this]{ return GetActorScale3D(); },
+			[this](const FVector& NewScale){ SetActorScale3D(NewScale); });
 }
