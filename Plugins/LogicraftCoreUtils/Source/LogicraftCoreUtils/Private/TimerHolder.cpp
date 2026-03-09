@@ -8,12 +8,6 @@
 #include "Editor.h"
 #endif
 
-#define TIMER_HOLDER_CHECK() \
-		checkf(TimerManager != nullptr, TEXT("The timer manager was not retrieved prior to using this function."))
-
-#define TIMER_HOLDER_ENSURE() \
-		ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found."))
-
 FTimerHolder::~FTimerHolder()
 {
 	if (RetrieveTimerManager())
@@ -38,34 +32,54 @@ void FTimerHolder::Clear()
 	}
 }
 
-bool FTimerHolder::IsPaused() const
+bool FTimerHolder::IsPaused()
 {
-	TIMER_HOLDER_CHECK();
-	return TimerManager->IsTimerPaused(TimerHandle);
+	if (TIMER_HOLDER_ENSURE())
+	{
+		return TimerManager->IsTimerPaused(TimerHandle);	
+	}
+
+	return false;
 }
 
-bool FTimerHolder::IsAlreadyRunning() const
+bool FTimerHolder::IsAlreadyRunning()
 {
-	TIMER_HOLDER_CHECK();
-	return TimerManager->TimerExists(TimerHandle);
+	if (TIMER_HOLDER_ENSURE())
+	{
+		return TimerManager->TimerExists(TimerHandle);	
+	}
+
+	return false;
 }
 
-float FTimerHolder::GetElapsedTime() const
+float FTimerHolder::GetElapsedTime()
 {
-	TIMER_HOLDER_CHECK();
-	return TimerManager->GetTimerElapsed(TimerHandle);
+	if (TIMER_HOLDER_ENSURE())
+	{
+		return TimerManager->GetTimerElapsed(TimerHandle);	
+	}
+
+	return 0.f;
 }
 
-float FTimerHolder::GetRate() const
+float FTimerHolder::GetRate()
 {
-	TIMER_HOLDER_CHECK();
-	return TimerManager->GetTimerRate(TimerHandle);
+	if (TIMER_HOLDER_ENSURE())
+	{
+		return TimerManager->GetTimerRate(TimerHandle);
+	}
+
+	return 0.f;
 }
 
-float FTimerHolder::GetRemainingTime() const
+float FTimerHolder::GetRemainingTime()
 {
-	TIMER_HOLDER_CHECK();
-	return TimerManager->GetTimerRemaining(TimerHandle);
+	if (TIMER_HOLDER_ENSURE())
+	{
+		return TimerManager->GetTimerRemaining(TimerHandle);
+	}
+
+	return 0.f;
 }
 
 bool FTimerHolder::RetrieveTimerManager()

@@ -9,11 +9,8 @@
 #include "Meta/LCUConcepts.h"
 #include "GameFramework/Actor.h"
 
-namespace TypeTrait
-{
-	template<typename TCallable, typename ...TArgs>
-	static constexpr bool IsInvocable_V = std::is_invocable_v<TCallable, TArgs...>;
-} // TypeTraits
+#define TIMER_HOLDER_ENSURE() \
+ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found."))
 
 struct LOGICRAFTCOREUTILS_API FTimerParameters
 {
@@ -35,12 +32,13 @@ public:
 	FTimerHolder() = default;
 	~FTimerHolder();
 
-	template<typename TCallable>
-	FTimerHandle Schedule(TCallable&& TimerCallback, const FTimerParameters TimerParameters)
+	template<typename TFunctor>
+		requires Concept::Invocable<TFunctor>
+	FTimerHandle Schedule(TFunctor&& TimerCallback, const FTimerParameters TimerParameters)
 	{
-		if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))
+		if (TIMER_HOLDER_ENSURE())
 		{
-			TimerManager->SetTimer(TimerHandle, Forward<TCallable>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
+			TimerManager->SetTimer(TimerHandle, Forward<TFunctor>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
 		}
 		
 		return TimerHandle;
@@ -50,7 +48,7 @@ public:
 		requires Concept::Invocable<TMethod, TObject>
 	FTimerHandle Schedule(TObject* Object, TMethod&& TimerCallback, const FTimerParameters TimerParameters)
 	{
-		if (ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found.")))
+		if (TIMER_HOLDER_ENSURE())
 		{
 			TimerManager->SetTimer(TimerHandle, Object, Forward<TMethod>(TimerCallback), TimerParameters.Rate, TimerParameters.bIsLooping, TimerParameters.FirstDelay);	
 		}
@@ -61,12 +59,12 @@ public:
 	void Pause();
 	void Clear();
 
-	bool IsPaused() const;
-	bool IsAlreadyRunning() const;
+	bool IsPaused();
+	bool IsAlreadyRunning();
 
-	float GetElapsedTime() const;
-	float GetRate() const;
-	float GetRemainingTime() const;
+	float GetElapsedTime();
+	float GetRate();
+	float GetRemainingTime();
 
 private:
 	bool RetrieveTimerManager();
