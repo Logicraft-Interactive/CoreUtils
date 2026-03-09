@@ -2,11 +2,27 @@
 
 #include "EventBus.h"
 #include "Engine/Engine.h"
-#include "Engine/World.h"
 #include "Engine/GameInstance.h"
+#include "Engine/World.h"
+
+void UEventBus::Initialize(FSubsystemCollectionBase& Collection)
+{
+	Super::Initialize(Collection);
+
+	EventBusRef = this;
+}
+
+void UEventBus::Deinitialize()
+{
+	Super::Deinitialize();
+
+	EventBusRef = nullptr;
+}
 
 UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
 {
+	// Resolve the world from the context object, then fetch the subsystem from the GameInstance.
+	// Returns nullptr and logs a warning if the world cannot be resolved.
 	if (UWorld* World{ GEngine->GetWorldFromContextObject(WorldContext, EGetWorldErrorMode::LogAndReturnNull) })
 	{
 		return World->GetGameInstance()->GetSubsystem<ThisClass>();
@@ -15,13 +31,17 @@ UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
 	return nullptr;
 }
 
-void UEventBus::UnlockSignature(const UObject* WorldContext, const FGameplayTag& GameplayTag)
+void UEventBus::UnlockSignature(const FGameplayTag& GameplayTag)
 {
-	Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](ThisClass* EventBus)
+	Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag](ThisClass* EventBus)
 	{
+		// Write lock: we may remove the container from the map.
+		FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
 		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 		{
 			BaseEventContainer->SetLockedSignature(false);
+
+			// If nobody is subscribed anymore, the container serves no purpose — clean it up.
 			if (BaseEventContainer->GetSubscriberCount() == 0)
 			{
 				EventBus->Internal_Remove(GameplayTag);
@@ -30,18 +50,23 @@ void UEventBus::UnlockSignature(const UObject* WorldContext, const FGameplayTag&
 	});
 }
 
-bool UEventBus::Remove(const UObject* WorldContext, const FGameplayTag& GameplayTag, FDelegateHandle Handle)
+bool UEventBus::Remove(const FGameplayTag& GameplayTag, FDelegateHandle Handle)
 {
+	// Early-out before entering the subsystem: an invalid handle can never match anything.
 	if (!Handle.IsValid())
 	{
 		return false;
 	}
 
-	return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag, &Handle](ThisClass* EventBus)
+	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag, &Handle](ThisClass* EventBus)
 	{
+		// Write lock: Remove modifies the delegate list and may remove the container from the map.
+		FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
 		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 		{
 			const bool Result{ BaseEventContainer->Remove(Handle) };
+
+			// Clean up the container if it is now empty and its signature is not locked.
 			if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
 			{
 				EventBus->Internal_Remove(GameplayTag);
@@ -54,18 +79,23 @@ bool UEventBus::Remove(const UObject* WorldContext, const FGameplayTag& Gameplay
 	});
 }
 
-int32 UEventBus::RemoveAll(const UObject* WorldContext, const FGameplayTag& GameplayTag, const void* UserObject)
+int32 UEventBus::RemoveAll(const FGameplayTag& GameplayTag, const void* UserObject)
 {
+	// Early-out: a null object pointer cannot match any binding.
 	if (!UserObject)
 	{
 		return 0;
 	}
 
-	return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag, UserObject](ThisClass* EventBus)
+	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag, UserObject](ThisClass* EventBus)
 	{
+		// Write lock: RemoveAll modifies the delegate list and may remove the container from the map.
+		FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
 		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
 		{
 			const int32 RemovedSubscriber{ BaseEventContainer->RemoveAll(UserObject) };
+
+			// Clean up the container if it is now empty and its signature is not locked.
 			if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
 			{
 				EventBus->Internal_Remove(GameplayTag);
@@ -78,24 +108,29 @@ int32 UEventBus::RemoveAll(const UObject* WorldContext, const FGameplayTag& Game
 	});
 }
 
-bool UEventBus::IsBound(const UObject* WorldContext, const FGameplayTag& GameplayTag)
+bool UEventBus::IsBound(const FGameplayTag& GameplayTag)
 {
-	return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag](const ThisClass* EventBus)
+	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag](const ThisClass* EventBus)
 	{
+		// Read lock: pure query, no modification to the map or containers.
+		FReadScopeLock ReadScopeLock{ EventBus->RWLock };
 		const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) };
 		return BaseEventContainer ? BaseEventContainer->GetSubscriberCount() > 0 : false;	
 	});
 }
 
-bool UEventBus::IsBoundToObject(const UObject* WorldContext, const FGameplayTag& GameplayTag, const void* UserObject)
+bool UEventBus::IsBoundToObject(const FGameplayTag& GameplayTag, const void* UserObject)
 {
+	// Early-out: a null object can never be bound.
 	if (!UserObject)
 	{
 		return false;
 	}
 	
-	return Internal_ExecuteOnValidContext(WorldContext, [&GameplayTag, &UserObject](const ThisClass* EventBus)
+	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag, &UserObject](const ThisClass* EventBus)
 	{
+		// Read lock: pure query, no modification to the map or containers.
+		FReadScopeLock ReadScopeLock{ EventBus->RWLock };
 		const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) };    
 		return BaseEventContainer ? BaseEventContainer->IsBoundToObject(UserObject) : false;
 	});
@@ -103,11 +138,18 @@ bool UEventBus::IsBoundToObject(const UObject* WorldContext, const FGameplayTag&
 
 TSharedPtr<IEventContainerBase> UEventBus::Internal_Find(const FGameplayTag& GameplayTag) const
 {
+	// Converts the TSharedRef stored in the map to a TSharedPtr so callers can handle
+	// the "not found" case as nullptr without a separate validity check.
+	// Must be called while holding at least a read lock on RWLock.
 	const auto* FoundContainerBase{ ActiveEvents.Find(GameplayTag) };
 	return FoundContainerBase ? FoundContainerBase->ToSharedPtr() : nullptr;
 }
 
 bool UEventBus::Internal_Remove(const FGameplayTag& GameplayTag)
 {
+	// Removes the entry from the map. TSharedRef ref-count will drop to zero
+	// and the container will be destroyed if no other TSharedPtr holds a reference
+	// (e.g. a Broadcast in progress on another thread holding a TSharedPtr copy).
+	// Must be called while holding a write lock on RWLock.
 	return ActiveEvents.Remove(GameplayTag) > 0;
 }
