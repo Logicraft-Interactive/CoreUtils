@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "TimerHolder.h"
 #include "GameFramework/Actor.h"
 #include "RuntimePropertyEditor/RuntimeEditable.h"
 #include "TestRuntimePropertyEditor.generated.h"
@@ -15,8 +16,12 @@ class LOGICRAFTCOREUTILSSB_API ATestRuntimePropertyEditor : public AActor, publi
 public:
 	ATestRuntimePropertyEditor();
 
+	FTimerHolder DestroySelf;
+		
 protected:
 	virtual void BeginPlay() override;
+
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	virtual void OnPropertiesDisplay(FRuntimePropertyBuilder& PropertiesBuilder) override;
 };

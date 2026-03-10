@@ -25,9 +25,13 @@ void URuntimePropertyEditorSubsystem::Deinitialize()
 
 	CloseWindow();
 
-	RuntimePropertyEditorWindow.Reset();
-	RuntimePropertyEditor.Reset();
-	EditableObjects.Reset();
+	if (SelectionBox.IsValid())
+	{
+		SelectionBox->Destroy();
+		SelectionBox.Reset();
+	}
+	
+	EditableObjects.Empty();
 	EditableObjectsUIProperties.Empty();
 }
 
@@ -47,17 +51,20 @@ void URuntimePropertyEditorSubsystem::OpenWindow()
 	
 	SAssignNew(RuntimePropertyEditorWindow, SWindow)
 		.Title(FText::FromString(TEXT("RuntimePropertyEditor")))
-			.ClientSize({ 1920.f / 2.f, 1080.f / 2.f })
+		.ClientSize({ 1920.f / 2.f, 1080.f / 2.f })
 			[
 				SAssignNew(RuntimePropertyEditor, SRuntimePropertyEditor)
 					.EditableObjectList(&EditableObjects)
 					.OnEditableObjectAdded_UObject(this, &URuntimePropertyEditorSubsystem::OnEditableObjectAdded)
 					.OnEditableObjectSelectionChanged_UObject(this, &URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged)
 			];
-	
+
 	if (RuntimePropertyEditorWindow.IsValid())
 	{ 
-		FSlateApplication::Get().AddWindow(RuntimePropertyEditorWindow.ToSharedRef());	
+		FSlateApplication::Get().AddWindow(RuntimePropertyEditorWindow.ToSharedRef());
+
+		RuntimePropertyEditorWindow->GetOnWindowClosedEvent()
+			.AddUObject(this, &URuntimePropertyEditorSubsystem::OnWindowCloseEvent);
 	}
 }
 
@@ -65,23 +72,57 @@ void URuntimePropertyEditorSubsystem::CloseWindow()
 {
 	if (RuntimePropertyEditorWindow.IsValid())
 	{
-		RuntimePropertyEditorWindow->RequestDestroyWindow();	
+		RuntimePropertyEditorWindow->RequestDestroyWindow();
+		RuntimePropertyEditorWindow.Reset();
+		RuntimePropertyEditor.Reset();
+
+		constexpr bool IsHidden{ true };
+		HideSelectionBox(IsHidden, nullptr);
 	}
 }
 
 void URuntimePropertyEditorSubsystem::RegisterEditableObject(const TScriptInterface<IRuntimeEditable>& RuntimeEditable)
 {
 	UObject* EditableObject{ RuntimeEditable.GetObject() };
-	if (ensureMsgf(EditableObject || IsValid(EditableObject), TEXT("A nullptr runtime editable cannot be registered.")))
+	if (ensureMsgf(EditableObject || IsValid(EditableObject),
+		TEXT("URuntimePropertyEditorSubsystem: A nullptr runtime editable cannot be registered.")))
 	{
 		EditableObjects.Add(EditableObject);
 	}
 }
 
-TSharedRef<ITableRow> URuntimePropertyEditorSubsystem::OnEditableObjectAdded(TWeakObjectPtr<> EditableObject,
-	const TSharedRef<STableViewBase>& Owner)
+void URuntimePropertyEditorSubsystem::UnRegisterEditableObject(
+	const TScriptInterface<IRuntimeEditable>& RuntimeEditable)
 {
-	if (ensureMsgf(EditableObject.IsValid(), TEXT("Trying to use an invalid Editable Object")))
+	UObject* RuntimeEditableObject{ RuntimeEditable.GetObject() };
+	
+	if (!ensureMsgf(IsValid(RuntimeEditableObject),
+		TEXT("URuntimePropertyEditorSubsystem: Unable to unregister an invalid UObject.")))
+	{
+		return;
+	}
+
+	EditableObjects.Remove(RuntimeEditableObject);
+
+	const TSharedRef RemovedScrollBox{ EditableObjectsUIProperties[RuntimeEditableObject] };
+	EditableObjectsUIProperties.Remove(RuntimeEditableObject);
+
+	if (RuntimePropertyEditor->IsSelected(RemovedScrollBox))
+	{
+		RuntimePropertyEditor->DisplayObjectProperties(nullptr);
+		
+		constexpr bool IsHidden{ true };
+		HideSelectionBox(IsHidden, nullptr);
+	}
+
+	RuntimePropertyEditor->RefreshEditableObjectList();
+}
+
+TSharedRef<ITableRow> URuntimePropertyEditorSubsystem::OnEditableObjectAdded(TWeakObjectPtr<> EditableObject,
+                                                                             const TSharedRef<STableViewBase>& Owner)
+{
+	if (ensureMsgf(EditableObject.IsValid(),
+		TEXT("URuntimePropertyEditorSubsystem: A nullptr runtime editable cannot be registered.")))
 	{
 		auto* EditableObjectRawPtr{ EditableObject.Get() };
 	
@@ -105,10 +146,8 @@ void URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged(TWeakObje
 {
 	if (SelectedActor.IsValid())
 	{
-		SelectedActor->GetRootComponent()->TransformUpdated.RemoveAll(this);
-		SelectedActor.Reset();
-		
-		SelectionBox->SetActorHiddenInGame(true);
+		constexpr bool IsHidden{ true };
+		HideSelectionBox(IsHidden, nullptr);
 	}
 	
 	if (!SelectedItem.IsValid())
@@ -124,13 +163,8 @@ void URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged(TWeakObje
 			SpawnSelectionBox(*GetWorld());
 		}
 		
-		SelectedActor = Actor;
-		SelectedActor->GetRootComponent()->TransformUpdated.AddUObject(
-			this, &URuntimePropertyEditorSubsystem::OnSelectedActorTransformUpdated);
-
-		SelectionBox->SetActorTransform(Actor->GetTransform());
-		SelectionBox->SetActorScale3D(SelectionBox->GetActorScale3D() + FVector{ 0.1 });
-		SelectionBox->SetActorHiddenInGame(false);
+		constexpr bool IsHidden{ false };
+		HideSelectionBox(IsHidden, Actor);
 	}
 
 	if (const TSharedRef<SScrollBox>* PropertiesContainer{ EditableObjectsUIProperties.Find(SelectedItem) })
@@ -141,10 +175,10 @@ void URuntimePropertyEditorSubsystem::OnEditableObjectSelectionChanged(TWeakObje
 
 void URuntimePropertyEditorSubsystem::OnSelectedActorTransformUpdated(USceneComponent* UpdatedComponent,
 	EUpdateTransformFlags UpdateTransformFlags, ETeleportType Teleport)
-{
-	if (!SelectionBox.IsValid())
+{	
+	if (!SelectionBox.IsValid() || !UpdatedComponent)
 	{
-		SpawnSelectionBox(*GetWorld());
+		return;
 	}
 
 	SelectionBox->SetActorTransform(UpdatedComponent->GetRelativeTransform());
@@ -159,21 +193,82 @@ void URuntimePropertyEditorSubsystem::SpawnSelectionBox(UWorld& InWorld)
 	
 	SelectionBox = InWorld.SpawnActor<AActor>(SpawnParameters);
 	
+	if (!SelectionBox.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("RuntimePropertyEditorSubsystem: Failed to spawn selection box!"));
+		return;
+	}
+	
 	SelectionBoxMesh = Cast<UStaticMeshComponent>(
 		SelectionBox->AddComponentByClass(
-				UStaticMeshComponent::StaticClass(),
-				false,
-				FTransform::Identity,
-				false
+			UStaticMeshComponent::StaticClass(),
+			false,
+			FTransform::Identity,
+			false
 		));
 
-	auto* Settings{ URuntimePropertyEditorSettings::Get() };
+	if (!SelectionBoxMesh.IsValid())
+	{
+		UE_LOG(LogTemp, Error, TEXT("URuntimePropertyEditorSubsystem: Failed to create selection box mesh!"));
+		return;
+	}
 
-	UStaticMesh* SelectionMesh = Settings->SelectionMesh.LoadSynchronous();
-	UMaterialInstance* SelectionMaterial = Settings->SelectionMaterial.LoadSynchronous();
-	
-	SelectionBoxMesh->SetStaticMesh(SelectionMesh);
-	SelectionBoxMesh->SetMaterial(0, SelectionMaterial);
+	const URuntimePropertyEditorSettings* Settings = URuntimePropertyEditorSettings::Get();
+    
+	if (UStaticMesh* SelectionMesh = Settings->SelectionMesh.LoadSynchronous())
+	{
+		SelectionBoxMesh->SetStaticMesh(SelectionMesh);
+	}
+    
+	if (UMaterialInstance* SelectionMaterial = Settings->SelectionMaterial.LoadSynchronous())
+	{
+		SelectionBoxMesh->SetMaterial(0, SelectionMaterial);
+	}
 
 	SelectionBox->SetActorHiddenInGame(true);
+}
+
+void URuntimePropertyEditorSubsystem::HideSelectionBox(bool bIsHidden, AActor* ReferenceActor)
+{
+	if (!SelectionBox.IsValid())
+	{
+		return;
+	}
+	
+	if (bIsHidden)
+	{
+		if (SelectedActor.IsValid())
+		{
+			SelectedActor->GetRootComponent()->TransformUpdated.RemoveAll(this);
+			SelectedActor.Reset();	
+		}
+		
+		SelectionBox->SetActorHiddenInGame(true);
+
+		return;
+	}
+
+	SelectedActor = ReferenceActor;
+	SelectedActor->GetRootComponent()->TransformUpdated.AddUObject(
+	this, &URuntimePropertyEditorSubsystem::OnSelectedActorTransformUpdated);
+
+	SelectionBox->SetActorTransform(SelectedActor->GetTransform());
+
+	constexpr float SelectionBoxPadding = 0.1f;
+	SelectionBox->SetActorScale3D(SelectionBox->GetActorScale3D() + FVector{ SelectionBoxPadding });
+	SelectionBox->SetActorHiddenInGame(false);
+}
+
+void URuntimePropertyEditorSubsystem::OnWindowCloseEvent(const TSharedRef<SWindow>&)
+{
+	if (RuntimePropertyEditor.IsValid())
+	{
+		RuntimePropertyEditor->DisplayObjectProperties(nullptr);
+	}
+	
+	RuntimePropertyEditorWindow.Reset();
+	RuntimePropertyEditor.Reset();
+
+	constexpr bool IsHidden{ true };
+	HideSelectionBox(IsHidden, nullptr);
 }

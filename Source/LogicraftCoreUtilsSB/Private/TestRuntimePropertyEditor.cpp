@@ -15,6 +15,18 @@ void ATestRuntimePropertyEditor::BeginPlay()
 	Super::BeginPlay();
 
 	URuntimePropertyHelper::RegisterEditableObject(this, this);
+
+	DestroySelf.Schedule([this]
+	{
+		Destroy();
+	}, { false, 10.f });
+}
+
+void ATestRuntimePropertyEditor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+
+	URuntimePropertyHelper::UnRegisterEditableObject(this, this);
 }
 
 void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder& PropertiesBuilder)

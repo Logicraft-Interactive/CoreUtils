@@ -34,5 +34,16 @@ void URuntimePropertyHelper::RegisterEditableObject(const UObject* WorldContext,
 		[&RuntimeEditable](URuntimePropertyEditorSubsystem* RuntimePropertyEditor)
 		{
 			RuntimePropertyEditor->RegisterEditableObject(RuntimeEditable);
+		});	
+}
+
+void URuntimePropertyHelper::UnRegisterEditableObject(const UObject* WorldContext,
+	const TScriptInterface<IRuntimeEditable>& RuntimeEditable)
+{
+	Chain::StartChain(
+	URuntimePropertyEditorSubsystem::Get(WorldContext)).Execute(
+		[&RuntimeEditable](URuntimePropertyEditorSubsystem* RuntimePropertyEditor)
+		{
+			RuntimePropertyEditor->UnRegisterEditableObject(RuntimeEditable);
 		});
 }

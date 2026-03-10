@@ -1,6 +1,5 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
-
 #include "RuntimePropertyEditor/RuntimePropertyBuilder.h"
 #include "RuntimePropertyEditor/SlateFontStyleHelper.h"
 

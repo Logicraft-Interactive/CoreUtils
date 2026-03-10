@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
-
 #include "RuntimePropertyEditor/RuntimeEditable.h"
 
-// Add default functionality here for any IRuntimeEditable functions that are not pure virtual.
+// This file is intentionally minimal.
+// IRuntimeEditable is a pure interface with no default implementations.
+// All functionality must be provided by classes implementing this interface.
