@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Fonts/SlateFontInfo.h"
 
 /**
  * Utility class for loading fonts in packaged builds.
@@ -28,7 +29,7 @@ public:
 	/**
 	 * Loads a font from an absolute file path.
 	 * 
-	 * ⚠️ WARNING: No validation - will crash if the path is invalid!
+	 * WARNING: No validation - will crash if the path is invalid!
 	 * Use GetFontStyleSafe() for production code.
 	 * 
 	 * @param FontPath - Full path to the .ttf file (e.g., "C:/MyProject/Fonts/MyFont.ttf")
@@ -64,7 +65,7 @@ public:
 	/**
 	 * Loads a Roboto font from Unreal's Engine/Content/Slate/Fonts directory.
 	 * 
-	 * ⚠️ WARNING: No validation - will crash if the font name is wrong!
+	 * WARNING: No validation - will crash if the font name is wrong!
 	 * Use GetSlateFontStyleSafe() for production code.
 	 * 
 	 * Available fonts:

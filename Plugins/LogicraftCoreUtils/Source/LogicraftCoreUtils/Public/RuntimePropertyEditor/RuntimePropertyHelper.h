@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RuntimeEditable.h"
-
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "RuntimePropertyHelper.generated.h"
 
 /**

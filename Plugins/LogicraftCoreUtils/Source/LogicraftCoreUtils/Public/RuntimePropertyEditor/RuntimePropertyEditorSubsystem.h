@@ -6,6 +6,8 @@
 #include "RuntimeEditable.h"
 #include "RuntimePropertyEditor.h"
 #include "Subsystems/WorldSubsystem.h"
+#include "Engine/EngineTypes.h"
+#include "Components/SceneComponent.h"
 #include "RuntimePropertyEditorSubsystem.generated.h"
 
 /**

@@ -10,6 +10,8 @@
 #include "Widgets/Input/SVectorInputBox.h"
 #include "Widgets/Layout/SSeparator.h"
 
+class SScrollBox;
+
 /**
  * Fluent API builder for constructing runtime property editor UIs.
  * 

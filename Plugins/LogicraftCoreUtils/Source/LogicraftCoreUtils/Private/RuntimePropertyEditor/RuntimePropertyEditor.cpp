@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "RuntimePropertyEditor/RuntimePropertyEditor.h"
+#include "Widgets/Layout/SScrollBox.h"
 #include "SlateOptMacros.h"
 
 BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
