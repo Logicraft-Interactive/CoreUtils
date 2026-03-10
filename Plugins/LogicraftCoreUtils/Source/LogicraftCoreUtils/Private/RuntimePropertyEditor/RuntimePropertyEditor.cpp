@@ -1,6 +1,9 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "RuntimePropertyEditor/RuntimePropertyEditor.h"
+#include "SlateOptMacros.h"
+
+BEGIN_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
 void SRuntimePropertyEditor::Construct(const FArguments& InArgs)
 {
@@ -63,3 +66,5 @@ void SRuntimePropertyEditor::DisplayObjectProperties(const TSharedPtr<SScrollBox
 			PropertiesContainer.ToSharedRef()
 		];
 }
+
+END_SLATE_FUNCTION_BUILD_OPTIMIZATION

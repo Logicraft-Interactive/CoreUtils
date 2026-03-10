@@ -2,3 +2,8 @@
 
 
 #include "RuntimePropertyEditor/RuntimePropertyEditorSettings.h"
+
+URuntimePropertyEditorSettings::URuntimePropertyEditorSettings()
+{
+	
+}
