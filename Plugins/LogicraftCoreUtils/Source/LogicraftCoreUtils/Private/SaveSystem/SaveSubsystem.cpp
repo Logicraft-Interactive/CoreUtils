@@ -3,12 +3,17 @@
 
 #include "SaveSystem/SaveSubsystem.h"
 
+#include "Engine/Engine.h"
 #include "EngineUtils.h"
+#include "Internationalization/Regex.h"
 #include "LogCategory.h"
 #include "Kismet/GameplayStatics.h"
 #include "SaveSystem/SavableActor.h"
 #include "SaveSystem/SavableObject.h"
+#include "Serialization/MemoryReader.h"
+#include "Serialization/MemoryWriter.h"
 #include "Serialization/ObjectAndNameAsStringProxyArchive.h"
+#include "UObject/UObjectIterator.h"
 
 namespace SaveSystemUtils
 {

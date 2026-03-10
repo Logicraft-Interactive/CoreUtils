@@ -1,8 +1,9 @@
-﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
+// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Actor.h"
 #include "LCUTypeTraits.h"
 
 namespace Concept

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "SaveData.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "UObject/Interface.h"
 #include "SavableActor.generated.h"
 
@@ -55,7 +56,7 @@ protected:
 	bool bIsDynamicSpawned = false;
 
 	/** Class to use when re-spawning this actor during deserialization. Only relevant for dynamic actors. */
-	TSubclassOf<AActor> DynamicSpawnClass = nullptr;
+	TSubclassOf<UObject> DynamicSpawnClass = nullptr;
 
 	/** Unique identifier for this actor instance (FGuid string for dynamic, actor name for static). */
 	FString UniqueID;

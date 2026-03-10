@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Templates/SubclassOf.h"
 #include "GameFramework/SaveGame.h"
 #include "UObject/Object.h"
 #include "SaveData.generated.h"
