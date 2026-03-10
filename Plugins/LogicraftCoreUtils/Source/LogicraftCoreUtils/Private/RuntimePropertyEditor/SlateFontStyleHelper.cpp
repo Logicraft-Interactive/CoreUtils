@@ -3,6 +3,8 @@
 
 #include "RuntimePropertyEditor/SlateFontStyleHelper.h"
 #include "LogCategory.h"
+#include "Misc/Paths.h"
+#include "Styling/CoreStyle.h"
 
 FSlateFontInfo SlateFontStyleHelper::GetFontStyle(FStringView FontPath, float FontSize)
 {
@@ -20,7 +22,7 @@ FSlateFontInfo SlateFontStyleHelper::GetFontStyleSafe(const FString& FontPath, f
 		TEXT("SlateFontStyleHelper: Unable to load the wanted font [Font Path: %s].\n"
 					 "Loading default font 'Roboto-Regular' instead."), *FontPath)
 	
-	return FSlateFontInfo{ FPaths::EngineContentDir() / "Slate/Fonts/Roboto-Regular.ttf", FontSize };
+	return FCoreStyle::GetDefaultFontStyle("Regular", FontSize);
 }
 
 FSlateFontInfo SlateFontStyleHelper::GetSlateFontStyle(FStringView FontName, float FontSize)
@@ -49,5 +51,5 @@ FSlateFontInfo SlateFontStyleHelper::GetSlateFontStyleSafe(FStringView FontName,
 		TEXT("SlateFontStyleHelper: Unable to load the wanted font [Font Path: %s].\n"
 					 "Loading default font 'Roboto-Regular' instead."), *FontPath)
 	
-	return FSlateFontInfo{ FPaths::EngineContentDir() / "Slate/Fonts/Roboto-Regular.ttf", FontSize };
+	return FCoreStyle::GetDefaultFontStyle("Regular", FontSize);
 }

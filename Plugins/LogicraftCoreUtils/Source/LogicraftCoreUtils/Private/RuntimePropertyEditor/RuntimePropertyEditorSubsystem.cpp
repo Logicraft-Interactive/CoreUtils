@@ -1,8 +1,13 @@
 ﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #include "RuntimePropertyEditor/RuntimePropertyEditorSubsystem.h"
-
 #include "RuntimePropertyEditor/RuntimePropertyEditorSettings.h"
+#include "Engine/Engine.h"
+#include "GameFramework/Actor.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInstance.h"
+#include "Components/StaticMeshComponent.h"
+#include "Widgets/Layout/SScrollBox.h"
 
 URuntimePropertyEditorSubsystem::ThisClass* URuntimePropertyEditorSubsystem::Get(const UObject* WorldContext)
 {

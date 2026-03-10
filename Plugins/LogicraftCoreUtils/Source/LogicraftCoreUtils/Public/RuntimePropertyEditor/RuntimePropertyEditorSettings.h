@@ -6,6 +6,9 @@
 #include "Engine/DeveloperSettings.h"
 #include "RuntimePropertyEditorSettings.generated.h"
 
+class UMaterialInstance;
+class UStaticMesh;
+
 /**
  * Project settings for the Runtime Property Editor.
  * 

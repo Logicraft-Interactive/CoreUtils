@@ -2,6 +2,7 @@
 
 #include "RuntimePropertyEditor/RuntimePropertyBuilder.h"
 #include "RuntimePropertyEditor/SlateFontStyleHelper.h"
+#include "Widgets/Layout/SScrollBox.h"
 
 FRuntimePropertyBuilder::FRuntimePropertyBuilder(const TSharedRef<SScrollBox>& InPropertiesContainer)
 	: PropertiesContainer(InPropertiesContainer)
