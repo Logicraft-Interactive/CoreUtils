@@ -8,7 +8,7 @@ public class LogicraftCoreUtilsSBTarget : TargetRules
 	public LogicraftCoreUtilsSBTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
-		DefaultBuildSettings = BuildSettingsVersion.V5;
+		DefaultBuildSettings = BuildSettingsVersion.V6;
 
 		ExtraModuleNames.AddRange( new string[] { "LogicraftCoreUtilsSB" } );
 	}

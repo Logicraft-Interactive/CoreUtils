@@ -131,7 +131,7 @@ public:
 	 * @param SlotName Name of the save slot.
 	 * @param Version Global version string to stamp the save with (format: "Major.Minor.Patch").
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Save System")
 	void SaveWorld(const FName& SlotName, const FString& Version);
 	
 	/**
@@ -143,6 +143,6 @@ public:
 	 * @param SlotName Name of the save slot to load.
 	 * @param Version Current global version string used for migration comparison.
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Save System")
 	void LoadWorld(const FName& SlotName, const FString& Version);	
 };

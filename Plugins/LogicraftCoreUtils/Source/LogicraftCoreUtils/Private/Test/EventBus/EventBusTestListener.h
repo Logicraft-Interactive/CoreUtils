@@ -1,8 +1,6 @@
-﻿// Copyright (c) Logicraft Interactive. All Rights Reserved.
+// Copyright (c) Logicraft Interactive. All Rights Reserved.
 
 #pragma once
-
-#if WITH_EDITOR
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
@@ -28,5 +26,3 @@ public:
 		LastValue = Value;
 	}
 };
-
-#endif

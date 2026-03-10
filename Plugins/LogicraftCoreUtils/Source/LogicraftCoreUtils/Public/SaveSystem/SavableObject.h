@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "SavableActor.h"
+#include "Kismet/BlueprintFunctionLibrary.h"
 #include "UObject/Interface.h"
 #include "SavableObject.generated.h"
 
