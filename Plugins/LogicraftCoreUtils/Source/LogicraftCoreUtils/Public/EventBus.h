@@ -96,7 +96,7 @@ struct IEventContainerBase
 	virtual ~IEventContainerBase() = default;
 
 	/** Returns a unique identifier for the concrete container type. Used for runtime type checking. */
-	virtual const void* GetTypeID() = 0;
+	virtual const uint64 GetTypeID() = 0;
 	
 	/** Removes a single delegate by handle. Returns true if found and removed. */
 	virtual bool Remove(FDelegateHandle DelegateHandle) = 0;
@@ -170,18 +170,46 @@ struct TEventContainer final : IEventContainerBase
 	
 	/** Whether the type signature is locked, preventing cleanup on zero subscribers. */
 	bool bLockedSignature{ false };
-
+	
 	/**
-	 * Returns a unique type identifier for this TEventContainer instantiation.
-	 * The address of a local static char is unique per template instantiation.
+	 * Computes a 64-bit FNV-1a hash of a string view entirely at compile time.
+	 * Uses a standard for-loop which is fully supported in consteval and 
+	 * avoids the massive compile-time overhead of template recursion.
 	 */
-	static const void* StaticGetTypeID()
+	static consteval uint64 CompileTimeStringHash(std::basic_string_view<TCHAR> StringView)
 	{
-		static char TypeId;
-		return &TypeId;
+		constexpr uint64 FNV_Offset_Basis{ 0xcbf29ce484222325ull };
+		constexpr uint64 FNV_Prime{ 0x100000001b3ull };
+
+		uint64 Hash{ FNV_Offset_Basis };
+
+		for (size_t Index = 0; Index < StringView.size(); ++Index)
+		{
+			Hash ^= static_cast<uint64>(StringView[Index]);
+			Hash *= FNV_Prime;
+		}
+
+		return Hash;
 	}
 	
-	virtual const void* GetTypeID() override { return StaticGetTypeID(); }
+	/**
+	 * Returns a unique type identifier for this TEventContainer instantiation.
+	 */
+	static consteval uint64 StaticGetTypeID()
+	{
+		uint64 CombinedHash{ 0 };
+
+		([&]
+		{
+			constexpr uint64 TypeHash{ CompileTimeStringHash(GetTypeNameAsString<TArgs>()) };
+			
+			CombinedHash ^= TypeHash + 0x9e3779b97f4a7c15ull + (CombinedHash << 6) + (CombinedHash >> 2);
+		}(), ...);
+
+		return CombinedHash;
+	}
+	
+	virtual const uint64 GetTypeID() override { return StaticGetTypeID(); }
 	
 	virtual bool Remove(FDelegateHandle DelegateHandle) override
 	{
