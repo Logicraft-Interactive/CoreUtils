@@ -71,6 +71,6 @@ public:
 
 	virtual void SetupSaveMigrateLogic_Implementation() override
 	{
-		UE_LOG(LogSaveSystem, Error, TEXT("Setup Save Migrating"));
+		UE_LOG(LogSaveSystem, Log, TEXT("Setup Save Migrating"));
 	}
 };

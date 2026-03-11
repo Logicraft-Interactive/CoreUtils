@@ -59,7 +59,7 @@ bool FLinqIntegerTest::RunTest(const FString& Parameters)
 }
 
 // 2. Complex Object Tests: Sorting and Edge Cases
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqSortingTest, "Project.Linq.Sorting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqSortingTest, "Logicraft.Linq.Sorting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FLinqSortingTest::RunTest(const FString& Parameters)
 {

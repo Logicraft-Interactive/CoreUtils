@@ -8,15 +8,11 @@
 void UEventBus::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-
-	EventBusRef = this;
 }
 
 void UEventBus::Deinitialize()
 {
 	Super::Deinitialize();
-
-	EventBusRef = nullptr;
 }
 
 UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
@@ -33,50 +29,44 @@ UEventBus::ThisClass* UEventBus::Get(const UObject* WorldContext)
 
 void UEventBus::UnlockSignature(const FGameplayTag& GameplayTag)
 {
-	Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag](ThisClass* EventBus)
+	// Write lock: we may remove the container from the map.
+	FWriteScopeLock WriteScopeLock{ RWLock };
+	if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 	{
-		// Write lock: we may remove the container from the map.
-		FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
-		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
-		{
-			BaseEventContainer->SetLockedSignature(false);
+		BaseEventContainer->SetLockedSignature(false);
 
-			// If nobody is subscribed anymore, the container serves no purpose — clean it up.
-			if (BaseEventContainer->GetSubscriberCount() == 0)
-			{
-				EventBus->Internal_Remove(GameplayTag);
-			}
+		// If nobody is subscribed anymore, the container serves no purpose — clean it up.
+		if (BaseEventContainer->GetSubscriberCount() == 0)
+		{
+			Internal_Remove(GameplayTag);
 		}
-	});
+	}
 }
 
 bool UEventBus::Remove(const FGameplayTag& GameplayTag, FDelegateHandle Handle)
 {
-	// Early-out before entering the subsystem: an invalid handle can never match anything.
+	// Early-out before acquiring a lock: an invalid handle can never match anything.
 	if (!Handle.IsValid())
 	{
 		return false;
 	}
 
-	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag, &Handle](ThisClass* EventBus)
+	// Write lock: Remove modifies the delegate list and may remove the container from the map.
+	FWriteScopeLock WriteScopeLock{ RWLock };
+	if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 	{
-		// Write lock: Remove modifies the delegate list and may remove the container from the map.
-		FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
-		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
+		const bool Result{ BaseEventContainer->Remove(Handle) };
+
+		// Clean up the container if it is now empty and its signature is not locked.
+		if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
 		{
-			const bool Result{ BaseEventContainer->Remove(Handle) };
-
-			// Clean up the container if it is now empty and its signature is not locked.
-			if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
-			{
-				EventBus->Internal_Remove(GameplayTag);
-			}
-
-			return Result;
+			Internal_Remove(GameplayTag);
 		}
 
-		return false;
-	});
+		return Result;
+	}
+
+	return false;
 }
 
 int32 UEventBus::RemoveAll(const FGameplayTag& GameplayTag, const void* UserObject)
@@ -87,39 +77,33 @@ int32 UEventBus::RemoveAll(const FGameplayTag& GameplayTag, const void* UserObje
 		return 0;
 	}
 
-	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag, UserObject](ThisClass* EventBus)
+	// Write lock: RemoveAll modifies the delegate list and may remove the container from the map.
+	FWriteScopeLock WriteScopeLock{ RWLock };
+	if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 	{
-		// Write lock: RemoveAll modifies the delegate list and may remove the container from the map.
-		FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
-		if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
+		const int32 RemovedSubscriber{ BaseEventContainer->RemoveAll(UserObject) };
+
+		// Clean up the container if it is now empty and its signature is not locked.
+		if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
 		{
-			const int32 RemovedSubscriber{ BaseEventContainer->RemoveAll(UserObject) };
-
-			// Clean up the container if it is now empty and its signature is not locked.
-			if (BaseEventContainer->GetSubscriberCount() == 0 && !BaseEventContainer->GetLockedSignature())
-			{
-				EventBus->Internal_Remove(GameplayTag);
-			}
-		
-			return RemovedSubscriber;            	
+			Internal_Remove(GameplayTag);
 		}
+	
+		return RemovedSubscriber;            	
+	}
 
-		return 0;
-	});
+	return 0;
 }
 
-bool UEventBus::IsBound(const FGameplayTag& GameplayTag)
+bool UEventBus::IsBound(const FGameplayTag& GameplayTag) const
 {
-	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag](const ThisClass* EventBus)
-	{
-		// Read lock: pure query, no modification to the map or containers.
-		FReadScopeLock ReadScopeLock{ EventBus->RWLock };
-		const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) };
-		return BaseEventContainer ? BaseEventContainer->GetSubscriberCount() > 0 : false;	
-	});
+	// Read lock: pure query, no modification to the map or containers.
+	FReadScopeLock ReadScopeLock{ RWLock };
+	const auto BaseEventContainer{ Internal_Find(GameplayTag) };
+	return BaseEventContainer ? BaseEventContainer->GetSubscriberCount() > 0 : false;	
 }
 
-bool UEventBus::IsBoundToObject(const FGameplayTag& GameplayTag, const void* UserObject)
+bool UEventBus::IsBoundToObject(const FGameplayTag& GameplayTag, const void* UserObject) const
 {
 	// Early-out: a null object can never be bound.
 	if (!UserObject)
@@ -127,13 +111,10 @@ bool UEventBus::IsBoundToObject(const FGameplayTag& GameplayTag, const void* Use
 		return false;
 	}
 	
-	return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag, &UserObject](const ThisClass* EventBus)
-	{
-		// Read lock: pure query, no modification to the map or containers.
-		FReadScopeLock ReadScopeLock{ EventBus->RWLock };
-		const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) };    
-		return BaseEventContainer ? BaseEventContainer->IsBoundToObject(UserObject) : false;
-	});
+	// Read lock: pure query, no modification to the map or containers.
+	FReadScopeLock ReadScopeLock{ RWLock };
+	const auto BaseEventContainer{ Internal_Find(GameplayTag) };    
+	return BaseEventContainer ? BaseEventContainer->IsBoundToObject(UserObject) : false;
 }
 
 TSharedPtr<IEventContainerBase> UEventBus::Internal_Find(const FGameplayTag& GameplayTag) const
