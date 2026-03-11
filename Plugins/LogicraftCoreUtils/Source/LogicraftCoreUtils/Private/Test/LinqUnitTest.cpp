@@ -1,4 +1,4 @@
-﻿#include "CoreMinimal.h"
+#include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
 #include "Linq.h"
 #include "LinqCustomObject.h"
@@ -8,7 +8,7 @@
 DEFINE_LOG_CATEGORY_STATIC(LogLinqTest, Log, All);
 
 // 1. Basic Integer Tests: Filtering, Projection, Aggregation
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqIntegerTest, "Project.Linq.IntegerLogic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqIntegerTest, "Logicraft.Linq.IntegerLogic", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
  
 
 bool FLinqIntegerTest::RunTest(const FString& Parameters)
@@ -91,7 +91,7 @@ bool FLinqSortingTest::RunTest(const FString& Parameters)
 }
 
 // 3. Unreal Engine Specific Tests: UObjects, Cast, IsValid
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqUObjectTest, "Project.Linq.UObjectFeatures", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqUObjectTest, "Logicraft.Linq.UObjectFeatures", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FLinqUObjectTest::RunTest(const FString& Parameters)
 {
@@ -151,7 +151,7 @@ bool FLinqUObjectTest::RunTest(const FString& Parameters)
 }
 
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqBigIntegerArrayOperation, "Project.Linq.BigIntegerArrayOperation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqBigIntegerArrayOperation, "Logicraft.Linq.BigIntegerArrayOperation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FLinqBigIntegerArrayOperation::RunTest(const FString& Parameters)
 {
@@ -257,7 +257,7 @@ bool FLinqBigIntegerArrayOperation::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqMultiContainerSupport, "Project.Linq.MultiContainerSupport", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FLinqMultiContainerSupport, "Logicraft.Linq.MultiContainerSupport", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FLinqMultiContainerSupport::RunTest(const FString& Parameters)
 {

@@ -36,7 +36,7 @@ struct FPropertySaveData
 /**
  * FComponentSaveData
  *
- * Saved state of a single actor component that implements ISavableObject.
+ * Saved state of a single actor component that derives from USaveableComponent.
  * Groups all serialized properties for one component together with its
  * version information for migration support.
  */
@@ -65,9 +65,9 @@ struct FComponentSaveData
 /**
  * FObjectSaveData
  *
- * Complete saved state of an actor that implements ISavableActor.
+ * Complete saved state of an actor that has a USaveComponent attached.
  * Contains identification, spawn information, version, serialized properties,
- * and the saved state of all its ISavableObject components.
+ * and the saved state of all its USaveableComponent sub-components.
  */
 USTRUCT()
 struct FObjectSaveData
@@ -102,7 +102,7 @@ struct FObjectSaveData
 	UPROPERTY(SaveGame)
 	int32 PropertiesCount{0};
 	
-	/** Array of saved component data for all ISavableObject components on this actor. */
+	/** Array of saved component data for all USaveableComponent sub-components on this actor. */
 	UPROPERTY(SaveGame)
 	TArray<FComponentSaveData> Components;
 

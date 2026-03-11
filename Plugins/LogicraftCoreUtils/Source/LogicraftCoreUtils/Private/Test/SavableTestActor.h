@@ -4,33 +4,27 @@
 
 #include "CoreMinimal.h"
 #include "LogCategory.h"
-#include "Components/ActorComponent.h"
 #include "GameFramework/Actor.h"
-#include "SaveSystem/SavableActor.h"
-#include "SaveSystem/SavableObject.h"
+#include "SaveSystem/SaveComponent.h"
+#include "SaveSystem/SaveableComponent.h"
 #include "SavableTestActor.generated.h"
 
 UCLASS()
-class USavableTestComponent : public UActorComponent, public ISavableObject
+class USavableTestComponent : public USaveableComponent
 {
 	GENERATED_BODY()
 
 public:
-	USavableTestComponent()
-	{
-		PrimaryComponentTick.bCanEverTick = false;
-	}
-
 	UPROPERTY(SaveGame)
 	int32 Ammo = 30;
 
 	UPROPERTY(SaveGame)
 	double Stamina = 87.5;
 
-	virtual FString GetVersion_Implementation() override { return TEXT("1.0.0"); }
+	virtual FString GetSaveVersion_Implementation() override { return TEXT("1.0.0"); }
 	virtual void SetupSaveMigrateLogic_Implementation() override
 	{
-		AddMigrateDelegateLambda(TEXT("1.0.0"), TEXT("1.1.0"), [](UObject* Self, auto From, auto To, auto Property)
+		AddMigrateDelegateLambda(TEXT("1.0.0"), TEXT("1.1.0"), [](USaveableComponent* Self, auto From, auto To, auto Property)
 		{
 			auto This = static_cast<USavableTestComponent*>(Self);
 		});
@@ -38,7 +32,21 @@ public:
 };
 
 UCLASS()
-class ASavableTestActor : public AActor, public ISavableActor
+class USavableTestSaveComponent : public USaveComponent
+{
+	GENERATED_BODY()
+
+public:
+	virtual FString GetSaveVersion_Implementation() override { return TEXT("1.0.0"); }
+
+	virtual void SetupSaveMigrateLogic_Implementation() override
+	{
+		UE_LOG(LogSaveSystem, Log, TEXT("Setup Save Migrating"));
+	}
+};
+
+UCLASS()
+class ASavableTestActor : public AActor
 {
 	GENERATED_BODY()
 
@@ -46,6 +54,7 @@ public:
 	ASavableTestActor()
 	{
 		PrimaryActorTick.bCanEverTick = false;
+		SaveComponent = CreateDefaultSubobject<USavableTestSaveComponent>(TEXT("SaveComponent"));
 		SavableComponent = CreateDefaultSubobject<USavableTestComponent>(TEXT("SavableTestComponent"));
 	}
 
@@ -65,12 +74,8 @@ public:
 	FVector Position = FVector::ZeroVector;
 
 	UPROPERTY()
+	TObjectPtr<USavableTestSaveComponent> SaveComponent;
+
+	UPROPERTY()
 	TObjectPtr<USavableTestComponent> SavableComponent;
-
-	virtual FString GetVersion_Implementation() override { return TEXT("1.0.0"); }
-
-	virtual void SetupSaveMigrateLogic_Implementation() override
-	{
-		UE_LOG(LogSaveSystem, Log, TEXT("Setup Save Migrating"));
-	}
 };
