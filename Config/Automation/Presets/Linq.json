@@ -2,10 +2,10 @@
 	"id": "Linq",
 	"name": "Linq",
 	"enabledTests": [
-		"Project.Linq.BigIntegerArrayOperation",
-		"Project.Linq.IntegerLogic",
-		"Project.Linq.MultiContainerSupport",
-		"Project.Linq.Sorting",
-		"Project.Linq.UObjectFeatures"
+		"Logicraft.Linq.BigIntegerArrayOperation",
+		"Logicraft.Linq.IntegerLogic",
+		"Logicraft.Linq.MultiContainerSupport",
+		"Logicraft.Linq.Sorting",
+		"Logicraft.Linq.UObjectFeatures"
 	]
 }

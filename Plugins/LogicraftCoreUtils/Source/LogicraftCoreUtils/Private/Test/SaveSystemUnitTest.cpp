@@ -9,7 +9,7 @@
 
 #include "SaveSystem/SaveSubsystem.h"
 #include "SaveSystem/SaveData.h"
-#include "SaveSystem/SavableActor.h"
+#include "SaveSystem/SaveComponent.h"
 #include "Test/SavableTestActor.h"
 
 // --- TEST CONSTANTS ---
@@ -48,7 +48,8 @@ bool FSaveSystemPerformanceTest::RunTest(const FString& Parameters)
 			AActor* Actor = World->SpawnActor<ASavableTestActor>(FVector(i * 100.f, 0.f, 0.f), FRotator::ZeroRotator);
 			if (Actor)
 			{
-				Cast<ISavableActor>(Actor)->SetIsDynamicSpawned(Actor->GetClass());
+				USaveComponent* SaveComp = Actor->FindComponentByClass<USaveComponent>();
+				SaveComp->SetIsDynamicSpawned(Actor->GetClass(), FGuid::NewGuid());
 				SpawnedActors.Add(Actor);
 			}
 		}
@@ -64,8 +65,8 @@ bool FSaveSystemPerformanceTest::RunTest(const FString& Parameters)
 	{
 		for (AActor* Actor : SpawnedActors)
 		{
-			ISavableActor* Savable = Cast<ISavableActor>(Actor);
-			if (auto Data = FSaveSerializer::SerializeActor(Savable))
+			USaveComponent* SaveComp = Actor->FindComponentByClass<USaveComponent>();
+			if (auto Data = FSaveSerializer::SerializeActor(SaveComp))
 			{
 				SerializedData.Add(MoveTemp(*Data));
 			}
@@ -144,7 +145,7 @@ bool FSaveSystemPerformanceTest::RunTest(const FString& Parameters)
 // Migration delegates are per-class (static map keyed by UClass*), so they
 // apply to any instance including dynamically spawned actors.
 // =============================================================================
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSaveSystemVersionMigrationTest, "Project.SaveSystem.VersionMigration", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSaveSystemVersionMigrationTest, "Logicraft.SaveSystem.VersionMigration", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 bool FSaveSystemVersionMigrationTest::RunTest(const FString& Parameters)
 {
@@ -158,18 +159,18 @@ bool FSaveSystemVersionMigrationTest::RunTest(const FString& Parameters)
 	AActor* RawActor = World->SpawnActor<ASavableTestActor>(FVector::ZeroVector, FRotator::ZeroRotator);
 	TestNotNull(TEXT("Actor should spawn"), RawActor);
 
-	ISavableActor* Savable = Cast<ISavableActor>(RawActor);
-	TestNotNull(TEXT("Actor should implement ISavableActor"), Savable);
-	Savable->SetIsDynamicSpawned(RawActor->GetClass());
+	USaveComponent* SaveComp = RawActor->FindComponentByClass<USaveComponent>();
+	TestNotNull(TEXT("Actor should have a USaveComponent"), SaveComp);
+	SaveComp->SetIsDynamicSpawned(RawActor->GetClass(), FGuid::NewGuid());
 
-	TOptional<FObjectSaveData> OptData = FSaveSerializer::SerializeActor(Savable);
+	TOptional<FObjectSaveData> OptData = FSaveSerializer::SerializeActor(SaveComp);
 	TestTrue(TEXT("Serialization should succeed"), OptData.IsSet());
 
 	FObjectSaveData SaveData = MoveTemp(*OptData);
 	SaveData.SaveVersion = TEXT("0.9.0");
 
 	bool bMigrationCalled = false;
-	Savable->AddMigrateDelegateLambda(TEXT("0.9.0"), TEXT("1.0.0"),
+	SaveComp->AddMigrateDelegateLambda(TEXT("0.9.0"), TEXT("1.0.0"),
 		[&bMigrationCalled](AActor* Actor, FString From, FString To, const TArray<FPropertySaveData>& OldProps)
 		{
 			bMigrationCalled = true;
@@ -194,7 +195,7 @@ bool FSaveSystemVersionMigrationTest::RunTest(const FString& Parameters)
 // Test: Chained version migration (0.8.0 -> 0.9.0 -> 1.0.0)
 // Verifies that the migration chain executes delegates in order.
 // =============================================================================
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSaveSystemVersionMigrationChainTest, "Project.SaveSystem.VersionMigrationChain", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSaveSystemVersionMigrationChainTest, "Logicraft.SaveSystem.VersionMigrationChain", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 bool FSaveSystemVersionMigrationChainTest::RunTest(const FString& Parameters)
 {
@@ -208,11 +209,11 @@ bool FSaveSystemVersionMigrationChainTest::RunTest(const FString& Parameters)
 	AActor* RawActor = World->SpawnActor<ASavableTestActor>(FVector::ZeroVector, FRotator::ZeroRotator);
 	TestNotNull(TEXT("Actor should spawn"), RawActor);
 
-	ISavableActor* Savable = Cast<ISavableActor>(RawActor);
-	TestNotNull(TEXT("Actor should implement ISavableActor"), Savable);
-	Savable->SetIsDynamicSpawned(RawActor->GetClass());
+	USaveComponent* SaveComp = RawActor->FindComponentByClass<USaveComponent>();
+	TestNotNull(TEXT("Actor should have a USaveComponent"), SaveComp);
+	SaveComp->SetIsDynamicSpawned(RawActor->GetClass(), FGuid::NewGuid());
 
-	TOptional<FObjectSaveData> OptData = FSaveSerializer::SerializeActor(Savable);
+	TOptional<FObjectSaveData> OptData = FSaveSerializer::SerializeActor(SaveComp);
 	TestTrue(TEXT("Serialization should succeed"), OptData.IsSet());
 
 	FObjectSaveData SaveData = MoveTemp(*OptData);
@@ -220,13 +221,13 @@ bool FSaveSystemVersionMigrationChainTest::RunTest(const FString& Parameters)
 
 	TArray<FString> MigrationOrder;
 
-	Savable->AddMigrateDelegateLambda(TEXT("0.8.0"), TEXT("0.9.0"),
+	SaveComp->AddMigrateDelegateLambda(TEXT("0.8.0"), TEXT("0.9.0"),
 		[&MigrationOrder](AActor* Self, FString From, FString To, const TArray<FPropertySaveData>& OldProps)
 		{
 			MigrationOrder.Add(FString::Printf(TEXT("%s->%s"), *From, *To));
 		});
 
-	Savable->AddMigrateDelegateLambda(TEXT("0.9.0"), TEXT("1.0.0"),
+	SaveComp->AddMigrateDelegateLambda(TEXT("0.9.0"), TEXT("1.0.0"),
 		[&MigrationOrder](AActor* Self, FString From, FString To, const TArray<FPropertySaveData>& OldProps)
 		{
 			MigrationOrder.Add(FString::Printf(TEXT("%s->%s"), *From, *To));

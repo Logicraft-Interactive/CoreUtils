@@ -2,8 +2,8 @@
 	"id": "SaveSystem",
 	"name": "SaveSystem",
 	"enabledTests": [
-		"Project.SaveSystem.Performance",
-		"Project.SaveSystem.VersionMigration",
-		"Project.SaveSystem.VersionMigrationChain"
+		"Logicraft.SaveSystem.Performance",
+		"Logicraft.SaveSystem.VersionMigration",
+		"Logicraft.SaveSystem.VersionMigrationChain"
 	]
 }

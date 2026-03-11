@@ -7,8 +7,8 @@
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "SaveSubsystem.generated.h"
 
-class ISavableObject;
-class ISavableActor;
+class USaveComponent;
+class USaveableComponent;
 
 /**
  * FSaveSerializer
@@ -49,15 +49,15 @@ private:
 
 public:
 	/**
-	 * @brief Serializes an ISavableActor and all its ISavableObject components into an FObjectSaveData.
+	 * @brief Serializes an actor (via its USaveComponent) and all its USaveableComponents into an FObjectSaveData.
 	 *
-	 * Iterates over all UPROPERTY(SaveGame) on the actor and its savable components,
+	 * Iterates over all UPROPERTY(SaveGame) on the actor and its saveable components,
 	 * captures version information, spawn data, and transform.
 	 *
-	 * @param SavableActor The actor to serialize (must be valid).
+	 * @param SaveComp The save component marking the actor as saveable.
 	 * @return The serialized data, or NullOpt if the actor is invalid.
 	 */
-	static TOptional<FObjectSaveData> SerializeActor(ISavableActor* SavableActor);
+	static TOptional<FObjectSaveData> SerializeActor(USaveComponent* SaveComp);
 
 	/**
 	 * @brief Reconstructs an actor from saved data, applying version migration if needed.
@@ -83,8 +83,8 @@ public:
  * Provides high-level SaveWorld / LoadWorld operations that handle the full pipeline:
  * actor discovery, serialization, slot management, deserialization, and version migration.
  *
- * On initialization, iterates over all loaded classes implementing ISavableActor or
- * ISavableObject and calls SetupSaveMigrateLogic on their CDOs to populate the
+ * On initialization, iterates over all loaded classes deriving from USaveComponent or
+ * USaveableComponent and calls SetupSaveMigrateLogic on their CDOs to populate the
  * per-class migration delegate maps.
  */
 UCLASS()
@@ -114,7 +114,7 @@ class LOGICRAFTCOREUTILS_API USaveSubsystem : public UGameInstanceSubsystem
 
 	/**
 	 * @brief Called when the GameInstance initializes.
-	 *        Iterates all ISavableActor / ISavableObject classes and calls
+	 *        Iterates all USaveComponent / USaveableComponent subclasses and calls
 	 *        SetupSaveMigrateLogic on their CDOs to register migration delegates.
 	 */
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -125,8 +125,8 @@ public:
 	/**
 	 * @brief Saves all savable actors in the current world to the specified slot.
 	 *
-	 * Discovers all actors implementing ISavableActor, serializes them and their
-	 * components, then writes the result to disk via UGameplayStatics::SaveGameToSlot.
+	 * Discovers all actors that have a USaveComponent, serializes them and their
+	 * USaveableComponents, then writes the result to disk via UGameplayStatics::SaveGameToSlot.
 	 *
 	 * @param SlotName Name of the save slot.
 	 * @param Version Global version string to stamp the save with (format: "Major.Minor.Patch").
