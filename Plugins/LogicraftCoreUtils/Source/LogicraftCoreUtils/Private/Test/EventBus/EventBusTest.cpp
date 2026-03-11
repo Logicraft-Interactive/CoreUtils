@@ -14,9 +14,9 @@
 // Test spec declaration
 // ---------------------------------------------------------------------------
 
-BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.Core.EventBus", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.EventBus", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
     UEventBus* EventBus  = nullptr;
-    UWorld*    TestWorld  = nullptr;
+    UWorld* TestWorld  = nullptr;
     UGameInstance* TestGameInstance = nullptr;
     FGameplayTag TestTag;
 END_DEFINE_SPEC(FEventBusSpec)
@@ -85,9 +85,9 @@ void FEventBusSpec::Define()
         It("Should deliver a single integer argument to the subscriber", [this]
         {
             int32 Received = 0;
-            UEventBus::AddLambda(TestTag, [&](int32 Val) { Received = Val; });
+            EventBus->AddLambda(TestTag, [&](int32 Val) { Received = Val; });
 
-            UEventBus::Broadcast(TestTag, 42);
+            EventBus->Broadcast(TestTag, 42);
 
             TestEqual("Received value", Received, 42);
         });
@@ -97,7 +97,7 @@ void FEventBusSpec::Define()
             FString ReceivedStr;
             float   ReceivedFloat = 0.f;
 
-            UEventBus::AddLambda(TestTag, [&](const FString& S, float F)
+            EventBus->AddLambda(TestTag, [&](const FString& S, float F)
             {
                 ReceivedStr   = S;
                 ReceivedFloat = F;
@@ -105,7 +105,7 @@ void FEventBusSpec::Define()
 
             // Explicit template arg required: deduction would produce FString, not const FString&,
             // causing a container type mismatch at broadcast time.
-            UEventBus::Broadcast<const FString&, float>(TestTag, FString("Hello"), 3.14f);
+            EventBus->Broadcast<const FString&, float>(TestTag, FString("Hello"), 3.14f);
 
             TestEqual("String argument", ReceivedStr,   FString("Hello"));
             TestEqual("Float argument",  ReceivedFloat, 3.14f);
@@ -115,11 +115,11 @@ void FEventBusSpec::Define()
         {
             int32 CountA = 0, CountB = 0, CountC = 0;
 
-            UEventBus::AddLambda(TestTag, [&](int32) { ++CountA; });
-            UEventBus::AddLambda(TestTag, [&](int32) { ++CountB; });
-            UEventBus::AddLambda(TestTag, [&](int32) { ++CountC; });
+            EventBus->AddLambda(TestTag, [&](int32) { ++CountA; });
+            EventBus->AddLambda(TestTag, [&](int32) { ++CountB; });
+            EventBus->AddLambda(TestTag, [&](int32) { ++CountC; });
 
-            UEventBus::Broadcast(TestTag, 0);
+            EventBus->Broadcast(TestTag, 0);
 
             TestEqual("Subscriber A called once", CountA, 1);
             TestEqual("Subscriber B called once", CountB, 1);
@@ -129,17 +129,17 @@ void FEventBusSpec::Define()
         It("Should do nothing when no subscriber is registered", [this]
         {
             // Must not crash or assert when the tag has never been registered.
-            UEventBus::Broadcast(TestTag, 99);
+            EventBus->Broadcast(TestTag, 99);
             TestTrue("No crash on empty broadcast", true);
         });
 
         It("Should do nothing after all subscribers have been removed", [this]
         {
             int32 CallCount = 0;
-            FDelegateHandle Handle = UEventBus::AddLambda(TestTag, [&](int32) { ++CallCount; });
+            FDelegateHandle Handle = EventBus->AddLambda(TestTag, [&](int32) { ++CallCount; });
 
-            UEventBus::Remove(TestTag, Handle);
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->Remove(TestTag, Handle);
+            EventBus->Broadcast(TestTag, 1);
 
             TestEqual("Callback must not fire after removal", CallCount, 0);
         });
@@ -153,15 +153,15 @@ void FEventBusSpec::Define()
     {
         It("Should correctly identify matching argument types", [this]
         {
-            UEventBus::AddLambda(TestTag, [](int32, float, FString) {});
+            EventBus->AddLambda(TestTag, [](int32, float, FString) {});
 
-            TestTrue("Matching types",     UEventBus::IsArgsType<int32, float, FString>(TestTag));
-            TestFalse("Mismatched types",  UEventBus::IsArgsType<int32, float, char>(TestTag));
+            TestTrue("Matching types",     EventBus->IsArgsType<int32, float, FString>(TestTag));
+            TestFalse("Mismatched types",  EventBus->IsArgsType<int32, float, char>(TestTag));
         });
 
         It("Should report false for IsArgsType when the tag has no container", [this]
         {
-            TestFalse("No container yet", UEventBus::IsArgsType<int32>(TestTag));
+            TestFalse("No container yet", EventBus->IsArgsType<int32>(TestTag));
         });
     });
 
@@ -173,60 +173,60 @@ void FEventBusSpec::Define()
     {
         It("Should pre-associate types before any subscriber is added", [this]
         {
-            UEventBus::LockSignature<int32, int32>(TestTag);
+            EventBus->LockSignature<int32, int32>(TestTag);
 
             TestTrue("Signature is locked to <int32, int32>",
-                UEventBus::IsArgsType<int32, int32>(TestTag));
+                EventBus->IsArgsType<int32, int32>(TestTag));
 
-            UEventBus::UnlockSignature(TestTag);
+            EventBus->UnlockSignature(TestTag);
         });
 
         It("Should keep the container alive with zero subscribers while locked", [this]
         {
-            UEventBus::LockSignature<int32>(TestTag);
+            EventBus->LockSignature<int32>(TestTag);
 
             // No subscriber — container must still exist and hold its type.
             TestTrue("Container survives with zero subscribers while locked",
-                UEventBus::IsArgsType<int32>(TestTag));
+                EventBus->IsArgsType<int32>(TestTag));
 
-            UEventBus::UnlockSignature(TestTag);
+            EventBus->UnlockSignature(TestTag);
         });
 
         It("Should destroy the container when unlocked with zero subscribers", [this]
         {
-            UEventBus::LockSignature<int32>(TestTag);
-            UEventBus::UnlockSignature(TestTag);
+            EventBus->LockSignature<int32>(TestTag);
+            EventBus->UnlockSignature(TestTag);
 
             // After unlock with no subscribers, the container must be gone.
             TestFalse("Container cleaned up after unlock with zero subscribers",
-                UEventBus::IsArgsType<int32>(TestTag));
+                EventBus->IsArgsType<int32>(TestTag));
         });
 
         It("Should allow a different signature after unlock and subscriber removal", [this]
         {
-            UEventBus::LockSignature<int32, int32>(TestTag);
-            UEventBus::UnlockSignature(TestTag);
+            EventBus->LockSignature<int32, int32>(TestTag);
+            EventBus->UnlockSignature(TestTag);
 
-            UEventBus::AddLambda(TestTag, [](float, float) {});
+            EventBus->AddLambda(TestTag, [](float, float) {});
 
-            TestTrue("New signature accepted",      UEventBus::IsArgsType<float, float>(TestTag));
-            TestFalse("Old signature is gone",      UEventBus::IsArgsType<int32, int32>(TestTag));
+            TestTrue("New signature accepted",      EventBus->IsArgsType<float, float>(TestTag));
+            TestFalse("Old signature is gone",      EventBus->IsArgsType<int32, int32>(TestTag));
         });
 
         It("Should keep the container alive after Remove when still locked", [this]
         {
-            UEventBus::LockSignature<int32>(TestTag);
+            EventBus->LockSignature<int32>(TestTag);
 
-            FDelegateHandle Handle = UEventBus::AddLambda(TestTag, [](int32) {});
-            UEventBus::Remove(TestTag, Handle);
+            FDelegateHandle Handle = EventBus->AddLambda(TestTag, [](int32) {});
+            EventBus->Remove(TestTag, Handle);
 
             // Lock is still held, so the container must survive subscriber removal.
             TestTrue("Container survives subscriber removal while locked",
-                UEventBus::IsArgsType<int32>(TestTag));
+                EventBus->IsArgsType<int32>(TestTag));
             TestFalse("But no delegate is bound",
-                UEventBus::IsBound(TestTag));
+                EventBus->IsBound(TestTag));
 
-            UEventBus::UnlockSignature(TestTag);
+            EventBus->UnlockSignature(TestTag);
         });
     });
 
@@ -239,28 +239,28 @@ void FEventBusSpec::Define()
         It("Should stop delivering events after Remove by handle", [this]
         {
             int32 CallCount = 0;
-            FDelegateHandle Handle = UEventBus::AddLambda(TestTag, [&](int32) { ++CallCount; });
+            FDelegateHandle Handle = EventBus->AddLambda(TestTag, [&](int32) { ++CallCount; });
 
-            UEventBus::Broadcast(TestTag, 1);
-            UEventBus::Remove(TestTag, Handle);
-            UEventBus::Broadcast(TestTag, 2);
+            EventBus->Broadcast(TestTag, 1);
+            EventBus->Remove(TestTag, Handle);
+            EventBus->Broadcast(TestTag, 2);
 
             TestEqual("Only the first broadcast was received", CallCount, 1);
         });
 
         It("Should clean up the container when the last subscriber is removed", [this]
         {
-            FDelegateHandle Handle = UEventBus::AddLambda(TestTag, [](int32) {});
+            FDelegateHandle Handle = EventBus->AddLambda(TestTag, [](int32) {});
 
-            UEventBus::Remove(TestTag, Handle);
+            EventBus->Remove(TestTag, Handle);
 
-            TestFalse("Tag is no longer bound",    UEventBus::IsBound(TestTag));
-            TestFalse("Container has been removed", UEventBus::IsArgsType<int32>(TestTag));
+            TestFalse("Tag is no longer bound",    EventBus->IsBound(TestTag));
+            TestFalse("Container has been removed", EventBus->IsArgsType<int32>(TestTag));
         });
 
         It("Should return false and do nothing when given an invalid handle", [this]
         {
-            const bool Result = UEventBus::Remove(TestTag, FDelegateHandle());
+            const bool Result = EventBus->Remove(TestTag, FDelegateHandle());
             TestFalse("Remove with invalid handle returns false", Result);
         });
 
@@ -268,11 +268,11 @@ void FEventBusSpec::Define()
         {
             int32 CountA = 0, CountB = 0;
 
-            FDelegateHandle HandleA = UEventBus::AddLambda(TestTag, [&](int32) { ++CountA; });
-            UEventBus::AddLambda(TestTag, [&](int32) { ++CountB; });
+            FDelegateHandle HandleA = EventBus->AddLambda(TestTag, [&](int32) { ++CountA; });
+            EventBus->AddLambda(TestTag, [&](int32) { ++CountB; });
 
-            UEventBus::Remove(TestTag, HandleA);
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->Remove(TestTag, HandleA);
+            EventBus->Broadcast(TestTag, 1);
 
             TestEqual("Removed subscriber A did not fire", CountA, 0);
             TestEqual("Remaining subscriber B fired",      CountB, 1);
@@ -289,23 +289,23 @@ void FEventBusSpec::Define()
         {
             UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
 
-            UEventBus::AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
-            UEventBus::AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
 
-            const int32 Removed = UEventBus::RemoveAll(TestTag, Listener);
+            const int32 Removed = EventBus->RemoveAll(TestTag, Listener);
 
             TestEqual("Two delegates removed",     Removed, 2);
-            TestFalse("Object is no longer bound", UEventBus::IsBoundToObject(TestTag, Listener));
+            TestFalse("Object is no longer bound", EventBus->IsBoundToObject(TestTag, Listener));
         });
 
         It("Should return 0 and do nothing when given a null object", [this]
         {
-            UEventBus::AddLambda(TestTag, [](int32) {});
+            EventBus->AddLambda(TestTag, [](int32) {});
 
-            const int32 Removed = UEventBus::RemoveAll(TestTag, nullptr);
+            const int32 Removed = EventBus->RemoveAll(TestTag, nullptr);
 
             TestEqual("Nothing removed for null object", Removed, 0);
-            TestTrue("Remaining subscriber still bound",  UEventBus::IsBound(TestTag));
+            TestTrue("Remaining subscriber still bound",  EventBus->IsBound(TestTag));
         });
 
         It("Should not affect subscribers bound to a different object", [this]
@@ -313,13 +313,13 @@ void FEventBusSpec::Define()
             UEventBusTestListener* ListenerA = NewObject<UEventBusTestListener>();
             UEventBusTestListener* ListenerB = NewObject<UEventBusTestListener>();
 
-            UEventBus::AddUObject(TestTag, ListenerA, &UEventBusTestListener::OnEvent);
-            UEventBus::AddUObject(TestTag, ListenerB, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, ListenerA, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, ListenerB, &UEventBusTestListener::OnEvent);
 
-            UEventBus::RemoveAll(TestTag, ListenerA);
+            EventBus->RemoveAll(TestTag, ListenerA);
 
-            TestFalse("ListenerA is unbound",    UEventBus::IsBoundToObject(TestTag, ListenerA));
-            TestTrue("ListenerB is still bound", UEventBus::IsBoundToObject(TestTag, ListenerB));
+            TestFalse("ListenerA is unbound",    EventBus->IsBoundToObject(TestTag, ListenerA));
+            TestTrue("ListenerB is still bound", EventBus->IsBoundToObject(TestTag, ListenerB));
         });
     });
 
@@ -331,35 +331,35 @@ void FEventBusSpec::Define()
     {
         It("IsBound should return false before any subscription", [this]
         {
-            TestFalse("Nothing bound yet", UEventBus::IsBound(TestTag));
+            TestFalse("Nothing bound yet", EventBus->IsBound(TestTag));
         });
 
         It("IsBound should return true once a lambda is added", [this]
         {
-            UEventBus::AddLambda(TestTag, [](int32) {});
-            TestTrue("Bound after AddLambda", UEventBus::IsBound(TestTag));
+            EventBus->AddLambda(TestTag, [](int32) {});
+            TestTrue("Bound after AddLambda", EventBus->IsBound(TestTag));
         });
 
         It("IsBound should return false after all subscribers are removed", [this]
         {
-            FDelegateHandle Handle = UEventBus::AddLambda(TestTag, [](int32) {});
-            UEventBus::Remove(TestTag, Handle);
-            TestFalse("Unbound after Remove", UEventBus::IsBound(TestTag));
+            FDelegateHandle Handle = EventBus->AddLambda(TestTag, [](int32) {});
+            EventBus->Remove(TestTag, Handle);
+            TestFalse("Unbound after Remove", EventBus->IsBound(TestTag));
         });
 
         It("IsBoundToObject should correctly identify a bound UObject", [this]
         {
             UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
 
-            TestFalse("Not bound before Add",   UEventBus::IsBoundToObject(TestTag, Listener));
-            UEventBus::AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
-            TestTrue("Bound after AddUObject",  UEventBus::IsBoundToObject(TestTag, Listener));
+            TestFalse("Not bound before Add",   EventBus->IsBoundToObject(TestTag, Listener));
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            TestTrue("Bound after AddUObject",  EventBus->IsBoundToObject(TestTag, Listener));
         });
 
         It("IsBoundToObject should return false for a null object", [this]
         {
-            UEventBus::AddLambda(TestTag, [](int32) {});
-            TestFalse("Null object is never bound", UEventBus::IsBoundToObject(TestTag, nullptr));
+            EventBus->AddLambda(TestTag, [](int32) {});
+            TestFalse("Null object is never bound", EventBus->IsBoundToObject(TestTag, nullptr));
         });
     });
 
@@ -373,8 +373,8 @@ void FEventBusSpec::Define()
         {
             UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
 
-            UEventBus::AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
-            UEventBus::Broadcast(TestTag, 7);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            EventBus->Broadcast(TestTag, 7);
 
             TestEqual("UObject method received value", Listener->LastValue,  7);
             TestEqual("UObject method called once",    Listener->CallCount,  1);
@@ -385,14 +385,14 @@ void FEventBusSpec::Define()
             int32 CallCount = 0;
             UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
 
-            UEventBus::AddWeakLambda(TestTag, Listener, [&](int32) { ++CallCount; });
+            EventBus->AddWeakLambda(TestTag, Listener, [&](int32) { ++CallCount; });
 
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->Broadcast(TestTag, 1);
             TestEqual("Fires while object is alive", CallCount, 1);
 
             // Simulate GC by marking the object as garbage.
             Listener->MarkAsGarbage();
-            UEventBus::Broadcast(TestTag, 2);
+            EventBus->Broadcast(TestTag, 2);
             TestEqual("Does not fire after object is destroyed", CallCount, 1);
         });
 
@@ -406,8 +406,8 @@ void FEventBusSpec::Define()
 
             TSharedRef<FSharedListener> Listener = MakeShared<FSharedListener>();
 
-            UEventBus::AddSP(TestTag, Listener, &FSharedListener::OnEvent);
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->AddSP(TestTag, Listener, &FSharedListener::OnEvent);
+            EventBus->Broadcast(TestTag, 1);
 
             TestEqual("SP delegate received event", Listener->CallCount, 1);
         });
@@ -423,27 +423,29 @@ void FEventBusSpec::Define()
         {
             struct FSelfRemovingListener : TSharedFromThis<FSelfRemovingListener>
             {
-                UWorld*          World;
+                UWorld* World;
                 FGameplayTag     Tag;
                 FDelegateHandle  Handle;
+                UEventBus* EventBusRef; // Used to call remove internally
                 bool             bDidRun = false;
 
                 void OnEvent(int32)
                 {
                     bDidRun = true;
-                    UEventBus::Remove(Tag, Handle);
+                    EventBusRef->Remove(Tag, Handle);
                 }
             };
 
             auto Listener    = MakeShared<FSelfRemovingListener>();
             Listener->World  = TestWorld;
             Listener->Tag    = TestTag;
-            Listener->Handle = UEventBus::AddSP(TestTag, Listener, &FSelfRemovingListener::OnEvent);
+            Listener->EventBusRef = EventBus;
+            Listener->Handle = EventBus->AddSP(TestTag, Listener, &FSelfRemovingListener::OnEvent);
 
             bool bOtherListenerRan = false;
-            UEventBus::AddLambda(TestTag, [&](int32) { bOtherListenerRan = true; });
+            EventBus->AddLambda(TestTag, [&](int32) { bOtherListenerRan = true; });
 
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->Broadcast(TestTag, 1);
 
             TestTrue("Self-removing listener ran",  Listener->bDidRun);
             TestTrue("Other listener also ran",     bOtherListenerRan);
@@ -451,7 +453,7 @@ void FEventBusSpec::Define()
             // For SP delegates, the delegate stores a TWeakPtr internally,
             // so we verify removal via IsBound — the second lambda is still bound,
             // meaning only the SP delegate was removed.
-            TestTrue("Tag still has the second subscriber", UEventBus::IsBound(TestTag));
+            TestTrue("Tag still has the second subscriber", EventBus->IsBound(TestTag));
         });
 
         It("Should not crash when a subscriber adds a new subscriber during broadcast", [this]
@@ -459,23 +461,23 @@ void FEventBusSpec::Define()
             int32 NewSubscriberCallCount = 0;
 
             // This lambda registers a second subscriber when it first fires.
-            UEventBus::AddLambda(TestTag, [&](int32)
+            EventBus->AddLambda(TestTag, [&](int32)
             {
                 // Only register once to avoid infinite recursion.
                 if (NewSubscriberCallCount == 0)
                 {
-                    UEventBus::AddLambda(TestTag, [&](int32) { ++NewSubscriberCallCount; });
+                    EventBus->AddLambda(TestTag, [&](int32) { ++NewSubscriberCallCount; });
                 }
             });
 
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->Broadcast(TestTag, 1);
 
             // The newly added subscriber must not fire during the broadcast that triggered its addition,
             // because UE iterates the invocation list in reverse and ignores appended entries.
             TestEqual("Newly added subscriber did not fire during the same broadcast",
                 NewSubscriberCallCount, 0);
 
-            UEventBus::Broadcast(TestTag, 2);
+            EventBus->Broadcast(TestTag, 2);
             TestEqual("Newly added subscriber fires on the next broadcast",
                 NewSubscriberCallCount, 1);
         });
@@ -486,13 +488,13 @@ void FEventBusSpec::Define()
             FGameplayTag SecondaryTag = FGameplayTag::RequestGameplayTag(TEXT("Test.Event.Bus"));
             int32 SecondaryCallCount  = 0;
 
-            UEventBus::AddLambda(TestTag, [&](int32)
+            EventBus->AddLambda(TestTag, [&](int32)
             {
                 // Nested broadcast on a different internal lambda to avoid stack overflow.
                 ++SecondaryCallCount;
             });
 
-            UEventBus::Broadcast(TestTag, 1);
+            EventBus->Broadcast(TestTag, 1);
 
             TestEqual("Nested logic executed without crash", SecondaryCallCount, 1);
         });

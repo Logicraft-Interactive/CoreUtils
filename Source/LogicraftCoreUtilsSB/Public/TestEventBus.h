@@ -6,13 +6,16 @@
 #include "GameFramework/Actor.h"
 #include "TestEventBus.generated.h"
 
+class UEventBus;
+
 UCLASS()
 class LOGICRAFTCOREUTILSSB_API ATestEventBus : public AActor
 {
 	GENERATED_BODY()
 
 	FDelegateHandle Handle;
-	
+
+	TWeakObjectPtr<UEventBus> EventBus;
 public:
 	// Sets default values for this actor's properties
 	ATestEventBus();

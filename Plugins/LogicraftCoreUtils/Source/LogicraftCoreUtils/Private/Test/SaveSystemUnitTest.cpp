@@ -18,7 +18,7 @@ static const FString BenchmarkVersion = TEXT("1.0.0");
 static const FName BenchmarkSlotName = TEXT("__SaveSystemBenchmark__");
 
 // --- TEST DEFINITION ---
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSaveSystemPerformanceTest, "Project.SaveSystem.Performance", EAutomationTestFlags::EditorContext | EAutomationTestFlags::PerfFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSaveSystemPerformanceTest, "Logicraft.SaveSystem.Performance", EAutomationTestFlags::EditorContext | EAutomationTestFlags::PerfFilter)
 
 bool FSaveSystemPerformanceTest::RunTest(const FString& Parameters)
 {

@@ -149,10 +149,10 @@ struct IEventContainerBase
  * The TypeID is a per-instantiation static address, giving O(1) type comparison.
  *
  * Thread-safety of the delegate itself is controlled by EVENTBUS_THREAD_SAFE_DELEGATES:
- *   - 0 (default): standard TMulticastDelegate, no internal locking.
- *   - 1: FDefaultTSDelegateUserPolicy is applied, protecting the delegate's invocation
- *        list with a FTransactionallySafeCriticalSection. Both reads and writes share
- *        the same mutex, so concurrent broadcasts are also serialized.
+ * - 0 (default): standard TMulticastDelegate, no internal locking.
+ * - 1: FDefaultTSDelegateUserPolicy is applied, protecting the delegate's invocation
+ * list with a FTransactionallySafeCriticalSection. Both reads and writes share
+ * the same mutex, so concurrent broadcasts are also serialized.
  */
 template<typename ...TArgs>
 struct TEventContainer final : IEventContainerBase
@@ -356,14 +356,14 @@ namespace EventBus
  *
  * --- Thread-Safety ---
  * The internal ActiveEvents map is protected by an FRWLock:
- *   - All write operations (Add, Remove, LockSignature, UnlockSignature) acquire
- *     a write lock for the duration of the map access.
- *   - Read operations (IsBound, IsBoundToObject, IsArgsType) acquire a read lock.
- *   - Broadcast acquires a short read lock only to extract the TSharedPtr to the
- *     container, then releases the lock before invoking callbacks. This prevents
- *     deadlocks when a callback re-enters the EventBus (e.g. calls Add or Remove).
- *     The TSharedPtr keeps the container alive even if another thread removes it
- *     from the map between the unlock and the broadcast.
+ * - All write operations (Add, Remove, LockSignature, UnlockSignature) acquire
+ * a write lock for the duration of the map access.
+ * - Read operations (IsBound, IsBoundToObject, IsArgsType) acquire a read lock.
+ * - Broadcast acquires a short read lock only to extract the TSharedPtr to the
+ * container, then releases the lock before invoking callbacks. This prevents
+ * deadlocks when a callback re-enters the EventBus (e.g. calls Add or Remove).
+ * The TSharedPtr keeps the container alive even if another thread removes it
+ * from the map between the unlock and the broadcast.
  *
  * The delegate invocation lists themselves are NOT protected by default.
  * Concurrent Add/Remove and Broadcast on the same tag from different threads
@@ -374,17 +374,6 @@ UCLASS()
 class LOGICRAFTCOREUTILS_API UEventBus : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
-
-	/**
-	 * Singleton-style reference to the subsystem instance, set in Initialize().
-	 * Allows all static methods to access the subsystem without a WorldContext parameter.
-	 * Valid as long as the GameInstance is alive. Reset to nullptr on Deinitialize().
-	 * 
-	 * WARNING: Multi-PIE is NOT supported. In a multi-PIE session, each GameInstance
-	 * overwrites this pointer on Initialize(), so all static calls will target the
-	 * last initialized instance only.
-	 */
-	inline static ThisClass* EventBusRef{ nullptr };
 	
 	/** Maps each Gameplay Tag to its type-erased event container. */
 	TMap<FGameplayTag, TSharedRef<IEventContainerBase>> ActiveEvents;
@@ -397,7 +386,6 @@ class LOGICRAFTCOREUTILS_API UEventBus : public UGameInstanceSubsystem
 
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
-
 	virtual void Deinitialize() override;
 	
 	/** Returns the EventBus subsystem for the world associated with WorldContext, or nullptr. */
@@ -412,7 +400,6 @@ public:
 	 * Stores a weak reference to UserObject; the delegate is automatically
 	 * skipped during broadcast if the object has been garbage collected.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param UserObject    The UObject instance to bind to.
 	 * @param Function      Member function pointer on UserObject.
@@ -421,16 +408,12 @@ public:
 	template<typename TUserObject, typename TMemberFunction>
 		requires std::is_base_of_v<UObject, TUserObject> &&
 			std::is_member_function_pointer_v<TMemberFunction>
-	static FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TUserObject* UserObject, TMemberFunction Function)
+	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TUserObject* UserObject, TMemberFunction Function)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, UserObject, Function](ThisClass* EventBus)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+		[UserObject, Function](auto& EventContainer)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-			[UserObject, Function](auto& EventContainer)
-			{
-				return EventContainer.MulticastDelegate.AddUObject(UserObject, Function);
-			});
+			return EventContainer.MulticastDelegate.AddUObject(UserObject, Function);
 		});
 	}
 
@@ -438,7 +421,6 @@ public:
 	 * TObjectPtr overload of AddUObject.
 	 * Unwraps the TObjectPtr and forwards to the raw pointer overload.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param UserObject    The TObjectPtr to the UObject instance.
 	 * @param Function      Member function pointer on UserObject.
@@ -447,7 +429,7 @@ public:
 	template<typename TUserObject, typename TMemberFunction>
 		requires std::is_base_of_v<UObject, TUserObject> &&
 			std::is_member_function_pointer_v<TMemberFunction>
-	static FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, TMemberFunction Function)
+	FDelegateHandle AddUObject(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, TMemberFunction Function)
 	{
 		return AddUObject(GameplayTag, UserObject.Get(), Function);
 	}
@@ -456,7 +438,6 @@ public:
 	 * Adds a UFunction-based delegate (reflected function, callable from Blueprint).
 	 * Stores a weak reference to UserObject.
 	 *
-	 
 	 * @param GameplayTag    Tag identifying the event to subscribe to.
 	 * @param UserObject     The UObject instance that owns the UFunction.
 	 * @param FunctionName   Name of the UFunction to bind.
@@ -465,16 +446,12 @@ public:
 	 */
 	template<typename TUserObject, typename ...TFunctionArgs>
 		requires std::is_base_of_v<UObject, TUserObject>
-	static FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TUserObject* UserObject, const FName& FunctionName)
+	FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TUserObject* UserObject, const FName& FunctionName)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, UserObject, &FunctionName](ThisClass* EventBus)
+		return Internal_AddCallback<TFunctionArgs...>(GameplayTag,
+		[UserObject, &FunctionName](auto& EventContainer)
 		{
-			return EventBus->Internal_AddCallback<TFunctionArgs...>(GameplayTag,
-			[UserObject, &FunctionName](auto& EventContainer)
-			{
-				return EventContainer.MulticastDelegate.AddUFunction(UserObject, FunctionName);
-			});
+			return EventContainer.MulticastDelegate.AddUFunction(UserObject, FunctionName);
 		});
 	}
 
@@ -482,7 +459,6 @@ public:
 	 * TObjectPtr overload of AddUFunction.
 	 * Unwraps the TObjectPtr and forwards to the raw pointer overload.
 	 *
-	 
 	 * @param GameplayTag    Tag identifying the event to subscribe to.
 	 * @param UserObject     The TObjectPtr to the UObject instance.
 	 * @param FunctionName   Name of the UFunction to bind.
@@ -491,7 +467,7 @@ public:
 	 */
 	template<typename TUserObject, typename ...TFunctionArgs>
 		requires std::is_base_of_v<UObject, TUserObject>
-	static FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, const FName& FunctionName)
+	FDelegateHandle AddUFunction(const FGameplayTag& GameplayTag, TObjectPtr<TUserObject> UserObject, const FName& FunctionName)
 	{
 		return AddUFunction<TUserObject, TFunctionArgs...>(GameplayTag, UserObject.Get(), FunctionName);
 	}
@@ -500,23 +476,17 @@ public:
 	 * Adds a pre-built TDelegate instance to the invocation list.
 	 * The delegate type determines the expected signature for the tag.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param Delegate      The delegate instance to add (moved into the list).
 	 * @return              A handle that can be passed to Remove().
 	 */
 	template<Concept::IsDelegate TDelegate>
-	static FDelegateHandle Add(const FGameplayTag& GameplayTag, TDelegate&& Delegate)
+	FDelegateHandle Add(const FGameplayTag& GameplayTag, TDelegate&& Delegate)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag]<typename TInDelegate>(ThisClass* EventBus, TInDelegate&& InDelegate)
+		return Internal_AddCallback<typename TRemoveReference<TDelegate>::Type>(GameplayTag,
+		[]<typename TCallbackDelegate>(auto& EventContainer, TCallbackDelegate&& CallbackDelegate)
 		{
-			return EventBus->Internal_AddCallback<TRemoveReference<TDelegate>::Type>(GameplayTag,
-			[]<typename TCallbackDelegate>(auto& EventContainer, TCallbackDelegate&& CallbackDelegate)
-			{
-				return EventContainer.MulticastDelegate.Add(Forward<TCallbackDelegate>(CallbackDelegate));
-			},
-			Forward<TInDelegate>(InDelegate));
+			return EventContainer.MulticastDelegate.Add(Forward<TCallbackDelegate>(CallbackDelegate));
 		},
 		Forward<TDelegate>(Delegate));
 	}
@@ -525,7 +495,6 @@ public:
 	 * Adds a weak lambda delegate bound to a UObject.
 	 * The lambda will not be invoked if UserObject has been garbage collected.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param UserObject    The UObject whose lifetime gates the lambda invocation.
 	 * @param Functor       Lambda or functor to bind.
@@ -533,17 +502,12 @@ public:
 	 */
 	template<typename TUserObject, EventBus::Concepts::IsFunctor TFunctor>
 		requires std::is_base_of_v<UObject, TUserObject>
-	static FDelegateHandle AddWeakLambda(const FGameplayTag& GameplayTag, TUserObject* UserObject, TFunctor&& Functor)
+	FDelegateHandle AddWeakLambda(const FGameplayTag& GameplayTag, TUserObject* UserObject, TFunctor&& Functor)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, UserObject]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+		[UserObject]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-			[UserObject]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
-			{
-				return EventContainer.MulticastDelegate.AddWeakLambda(UserObject, Forward<TCallbackFunctor>(CallbackFunctor));
-			},
-			Forward<TInFunctor>(InFunctor));
+			return EventContainer.MulticastDelegate.AddWeakLambda(UserObject, Forward<TCallbackFunctor>(CallbackFunctor));
 		},
 		Forward<TFunctor>(Functor));
 	}
@@ -553,25 +517,19 @@ public:
 	 * The lambda is always invoked as long as it is registered.
 	 * Caller is responsible for removing it before it becomes invalid.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param Functor       Lambda or functor to bind.
 	 * @return              A handle that can be passed to Remove().
 	 */
 	template<EventBus::Concepts::IsFunctor TFunctor>
-	static FDelegateHandle AddLambda(const FGameplayTag& GameplayTag, TFunctor&& Functor)
+	FDelegateHandle AddLambda(const FGameplayTag& GameplayTag, TFunctor&& Functor)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+		[]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-			[]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
-			{
-				return EventContainer.MulticastDelegate.AddLambda(Forward<TCallbackFunctor>(CallbackFunctor));
-			},
-			Forward<TInFunctor>(InFunctor));	
+			return EventContainer.MulticastDelegate.AddLambda(Forward<TCallbackFunctor>(CallbackFunctor));
 		},
-		Forward<TFunctor>(Functor));
+		Forward<TFunctor>(Functor));	
 	}
 
 	/**
@@ -579,7 +537,6 @@ public:
 	 * No lifetime management: if the object is destroyed before the delegate
 	 * is removed, invoking it is undefined behavior.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param UserObject    Raw pointer to the object instance (must not be a UObject).
 	 * @param Function      Member function pointer on UserObject.
@@ -587,17 +544,13 @@ public:
 	 */
 	template<typename TUserClass, typename TMemberFunction>
 		requires !std::is_base_of_v<UObject, TUserClass> && std::is_member_function_pointer_v<TMemberFunction>
-	static FDelegateHandle AddRaw(const FGameplayTag& GameplayTag, TUserClass* UserObject, TMemberFunction Function)
+	FDelegateHandle AddRaw(const FGameplayTag& GameplayTag, TUserClass* UserObject, TMemberFunction Function)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, UserObject, Function](ThisClass* EventBus)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+		[UserObject, Function](auto& EventContainer)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-			[UserObject, Function](auto& EventContainer)
-			{
-				return EventContainer.MulticastDelegate.AddRaw(UserObject, Function);
-			});	
-		});
+			return EventContainer.MulticastDelegate.AddRaw(UserObject, Function);
+		});	
 	}
 
 	/**
@@ -605,7 +558,6 @@ public:
 	 * Stores a weak reference; the delegate is skipped if the shared object expires.
 	 * Automatically selects AddThreadSafeSP when Mode == ESPMode::ThreadSafe.
 	 *
-	 
 	 * @param GameplayTag    Tag identifying the event to subscribe to.
 	 * @param UserObjectRef  Shared reference to the object instance.
 	 * @param Function       Member function pointer on the shared object.
@@ -613,23 +565,19 @@ public:
 	 */
 	template<typename TSharedRefType, ESPMode Mode, typename TMemberFunction>
 		requires std::is_member_function_pointer_v<TMemberFunction>
-	static FDelegateHandle AddSP(const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& UserObjectRef, TMemberFunction Function)
+	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, const TSharedRef<TSharedRefType, Mode>& UserObjectRef, TMemberFunction Function)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, &UserObjectRef, Function](ThisClass* EventBus)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
+		[&UserObjectRef, Function](auto& EventContainer)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TMemberFunction>::FArgsType>(GameplayTag,
-			[&UserObjectRef, Function](auto& EventContainer)
+			if constexpr (Mode == ESPMode::ThreadSafe)
 			{
-				if constexpr (Mode == ESPMode::ThreadSafe)
-				{
-					return EventContainer.MulticastDelegate.AddThreadSafeSP(UserObjectRef, Function);
-				}
-				else
-				{
-					return EventContainer.MulticastDelegate.AddSP(UserObjectRef, Function);
-				}
-			});
+				return EventContainer.MulticastDelegate.AddThreadSafeSP(UserObjectRef, Function);
+			}
+			else
+			{
+				return EventContainer.MulticastDelegate.AddSP(UserObjectRef, Function);
+			}
 		});
 	}
 
@@ -638,7 +586,6 @@ public:
 	 * UserObject must inherit from TSharedFromThis<TSharedType, Mode>.
 	 * Internally calls AsShared() to obtain the shared reference.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param UserObject    Raw pointer to a TSharedFromThis-derived instance.
 	 * @param Function      Member function pointer on UserObject.
@@ -647,7 +594,7 @@ public:
 	template<typename TSharedType, ESPMode Mode, typename TMemberFunction>
 		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType> &&
 			std::is_member_function_pointer_v<TMemberFunction>
-	static FDelegateHandle AddSP(const FGameplayTag& GameplayTag, TSharedType* UserObject, TMemberFunction Function)
+	FDelegateHandle AddSP(const FGameplayTag& GameplayTag, TSharedType* UserObject, TMemberFunction Function)
 	{
 		return AddSP(GameplayTag, StaticCastSharedRef<TSharedType, Mode>(UserObject->AsShared()), Function);
 	}
@@ -657,7 +604,6 @@ public:
 	 * The lambda is skipped during broadcast if the shared object has expired.
 	 * UserObject must inherit from TSharedFromThis<TSharedType, Mode>.
 	 *
-	 
 	 * @param GameplayTag    Tag identifying the event to subscribe to.
 	 * @param UserObjectRef  Raw pointer to a TSharedFromThis-derived instance.
 	 * @param Functor        Lambda or functor to bind.
@@ -665,17 +611,12 @@ public:
 	 */
 	template<typename TSharedType, ESPMode Mode, EventBus::Concepts::IsFunctor TFunctor>
 		requires std::is_base_of_v<TSharedFromThis<TSharedType, Mode>, TSharedType>
-	static FDelegateHandle AddSPLambda(const FGameplayTag& GameplayTag, const TSharedType* UserObjectRef, TFunctor&& Functor)
+	FDelegateHandle AddSPLambda(const FGameplayTag& GameplayTag, const TSharedType* UserObjectRef, TFunctor&& Functor)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, UserObjectRef]<typename TInFunctor>(ThisClass* EventBus, TInFunctor&& InFunctor)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
+		[&UserObjectRef]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunctor>::FArgsType>(GameplayTag,
-			[&UserObjectRef]<typename TCallbackFunctor>(auto& EventContainer, TCallbackFunctor&& CallbackFunctor)
-			{
-				return EventContainer.MulticastDelegate.AddSPLambda(UserObjectRef, Forward<TCallbackFunctor>(CallbackFunctor));
-			},
-			Forward<TInFunctor>(InFunctor));
+			return EventContainer.MulticastDelegate.AddSPLambda(UserObjectRef, Forward<TCallbackFunctor>(CallbackFunctor));
 		},
 		Forward<TFunctor>(Functor));
 	}
@@ -684,24 +625,19 @@ public:
 	 * Adds a static (free) function delegate.
 	 * No object binding; the function is always invoked unconditionally.
 	 *
-	 
 	 * @param GameplayTag   Tag identifying the event to subscribe to.
 	 * @param Function      Static or free function pointer.
 	 * @return              A handle that can be passed to Remove().
 	 */
 	template<typename TFunction>
 		requires !TypeTrait::TFunctionTraits<TFunction>::bIsClass
-	static FDelegateHandle AddStatic(const FGameplayTag& GameplayTag, TFunction Function)
+	FDelegateHandle AddStatic(const FGameplayTag& GameplayTag, TFunction Function)
 	{
-		return Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag, Function](ThisClass* EventBus)
+		return Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
+		[Function](auto& EventContainer)
 		{
-			return EventBus->Internal_AddCallback<typename TypeTrait::TFunctionTraits<TFunction>::FArgsType>(GameplayTag,
-			[Function](auto& EventContainer)
-            {
-            	return EventContainer.MulticastDelegate.AddStatic(Function);
-            });	
-		});
+			return EventContainer.MulticastDelegate.AddStatic(Function);
+		});	
 	}
 
 	// -----------------------------------------------------------------------
@@ -726,26 +662,23 @@ public:
 	 * @param GameplayTag  Tag whose signature to lock.
 	 */
 	template<typename ...TArgs>
-	static void LockSignature(const FGameplayTag& GameplayTag)
+	void LockSignature(const FGameplayTag& GameplayTag)
 	{
-		Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag](ThisClass* EventBus)
+		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
+
+		FWriteScopeLock WriteScopeLock{ RWLock };
+		if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 		{
-			using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
-
-			FWriteScopeLock WriteScopeLock{ EventBus->RWLock };
-			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
+			if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("The gameplay tag already has an assigned signature.")))
 			{
-				if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("The gameplay tag already has an assigned signature.")))
-				{
-					BaseEventContainer->SetLockedSignature(true);
-				}
-
-				return;
+				BaseEventContainer->SetLockedSignature(true);
 			}
 
-			FEventContainerType& EventContainer{ EventBus->Internal_AddActiveEvent<FEventContainerType>(GameplayTag) };
-			EventContainer.SetLockedSignature(true);
-		});
+			return;
+		}
+
+		FEventContainerType& EventContainer{ Internal_AddActiveEvent<FEventContainerType>(GameplayTag) };
+		EventContainer.SetLockedSignature(true);
 	}
 
 	/**
@@ -757,7 +690,7 @@ public:
 	 
 	 * @param GameplayTag  Tag whose signature to unlock.
 	 */
-	static void UnlockSignature(const FGameplayTag& GameplayTag);
+	void UnlockSignature(const FGameplayTag& GameplayTag);
 
 	// -----------------------------------------------------------------------
 	// Broadcast
@@ -767,12 +700,12 @@ public:
 	 * Broadcasts to all delegates registered under the given Gameplay Tag.
 	 *
 	 * Thread-safety strategy:
-	 *   1. A short read lock is acquired to retrieve a TSharedPtr to the container.
-	 *   2. The lock is released immediately after.
-	 *   3. The broadcast happens outside the lock, preventing deadlocks when a
-	 *      callback re-enters the EventBus (e.g. calls Add or Remove).
-	 *   4. The TSharedPtr keeps the container alive even if another thread removes
-	 *      it from the map between the unlock and the actual broadcast.
+	 * 1. A short read lock is acquired to retrieve a TSharedPtr to the container.
+	 * 2. The lock is released immediately after.
+	 * 3. The broadcast happens outside the lock, preventing deadlocks when a
+	 * callback re-enters the EventBus (e.g. calls Add or Remove).
+	 * 4. The TSharedPtr keeps the container alive even if another thread removes
+	 * it from the map between the unlock and the actual broadcast.
 	 *
 	 * Internally, UE's TMulticastDelegate::Broadcast locks the invocation list via
 	 * an internal counter (LockInvocationList/UnlockInvocationList) rather than copying it.
@@ -786,34 +719,28 @@ public:
 	 * @note For complex argument types (const refs, pointers), TArgs may be deduced
 	 * differently from the signature used at bind time, causing a type mismatch ensure.
 	 * In that case, specify the template arguments explicitly to match the original signature:
-	 *   UEventBus::Broadcast<const FMyStruct&>(Tag, MyStruct);
+	 * EventBus->Broadcast<const FMyStruct&>(Tag, MyStruct);
 	 * The explicit types must exactly match those used in the Add* call.
 	 */
 	template<typename ...TArgs>
-	static void Broadcast(const FGameplayTag& GameplayTag, TArgs... Args)
+	void Broadcast(const FGameplayTag& GameplayTag, TArgs... Args)
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
 		
-		Internal_ExecuteOnValidContext(EventBusRef,
-		[&GameplayTag](const ThisClass* EventBus, TArgs... InArgs)
+		TSharedPtr<IEventContainerBase> BaseEventContainer;
 		{
-			// Acquire a short read lock only to extract the shared pointer.
-			// Releasing before broadcast prevents deadlocks on re-entrant calls.
-			TSharedPtr<IEventContainerBase> BaseEventContainer;
+			FReadScopeLock ReadScopeLock{ RWLock };
+			BaseEventContainer = Internal_Find(GameplayTag);
+		}
+		
+		if (BaseEventContainer)
+		{
+			if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("Unable to broadcast a callback with those types of arguments.")))
 			{
-				FReadScopeLock ReadScopeLock{ EventBus->RWLock };
-				BaseEventContainer = EventBus->Internal_Find(GameplayTag);
+				auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
+				EventContainer.MulticastDelegate.Broadcast(Args...);
 			}
-			
-			if (BaseEventContainer)
-			{
-				if (Internal_CheckTypesID<FEventContainerType>(BaseEventContainer, TEXT("Unable to broadcast a callback with those types of arguments.")))
-				{
-					auto& EventContainer = static_cast<FEventContainerType&>(*BaseEventContainer);
-					EventContainer.MulticastDelegate.Broadcast(InArgs...);
-				}
-			}
-		}, Args...);
+		}
 	}
 
 	// -----------------------------------------------------------------------
@@ -831,7 +758,7 @@ public:
 	 * @param Handle        Handle returned by a previous Add* call.
 	 * @return              True if the delegate was found and removed.
 	 */
-	static bool Remove(const FGameplayTag& GameplayTag, FDelegateHandle Handle);
+	bool Remove(const FGameplayTag& GameplayTag, FDelegateHandle Handle);
 
 	/**
 	 * Removes all delegates bound to the given object from the invocation list.
@@ -843,7 +770,7 @@ public:
 	 * @param UserObject    The object whose delegates should be removed.
 	 * @return              The number of delegates removed.
 	 */
-	static int32 RemoveAll(const FGameplayTag& GameplayTag, const void* UserObject);
+	int32 RemoveAll(const FGameplayTag& GameplayTag, const void* UserObject);
 
 	// -----------------------------------------------------------------------
 	// Query
@@ -855,7 +782,7 @@ public:
 	 
 	 * @param GameplayTag   Tag to check.
 	 */
-	static bool IsBound(const FGameplayTag& GameplayTag);
+	bool IsBound(const FGameplayTag& GameplayTag) const;
 
 	/**
 	 * Returns true if at least one delegate bound to the given tag is owned by UserObject.
@@ -864,7 +791,7 @@ public:
 	 * @param GameplayTag   Tag to check.
 	 * @param UserObject    The object to check binding for.
 	 */
-	static bool IsBoundToObject(const FGameplayTag& GameplayTag, const void* UserObject);
+	bool IsBoundToObject(const FGameplayTag& GameplayTag, const void* UserObject) const;
 
 	/**
 	 * Returns true if the type signature currently associated with the given tag
@@ -878,20 +805,17 @@ public:
 	 * @param GameplayTag   Tag to check.
 	 */
 	template<typename ...TArgs>
-	static bool IsArgsType(const FGameplayTag& GameplayTag)
+	bool IsArgsType(const FGameplayTag& GameplayTag) const
 	{
 		using FEventContainerType = EventBus::TypeTraits::TContainerTypeFor<TArgs...>;
 		
-		return Internal_ExecuteOnValidContext(EventBusRef, [&GameplayTag](const ThisClass* EventBus)
+		FReadScopeLock ReadScopeLock{ RWLock };
+		if (const auto BaseEventContainer{ Internal_Find(GameplayTag) })
 		{
-			FReadScopeLock ReadScopeLock{ EventBus->RWLock };
-			if (const auto BaseEventContainer{ EventBus->Internal_Find(GameplayTag) })
-			{
-				return BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID();
-			}
+			return BaseEventContainer->GetTypeID() == FEventContainerType::StaticGetTypeID();
+		}
 
-			return false;
-		});
+		return false;
 	}
 	
 private:
@@ -901,37 +825,13 @@ private:
 	// -----------------------------------------------------------------------
 
 	/**
-	 * Checks that the EventBus instance (EventBusRef) is valid and invokes Callable if so.
-	 * Returns a default-constructed ReturnType if EventBusRef is null or invalid (e.g. during shutdown).
-	 * This avoids repeating the null-check pattern at every call site.
-	 *
-	 * NOTE: Does NOT acquire any lock. The caller is responsible for locking inside Callable.
-	 */
-	template<typename TCallable, typename ...TArgs>
-		requires std::invocable<TCallable, ThisClass*, TArgs...>
-	static auto Internal_ExecuteOnValidContext(ThisClass* InEventBusRef, TCallable&& Callable, TArgs&&... Args)
-	{
-		using ReturnType = std::invoke_result_t<TCallable, ThisClass*, TArgs...>;
-		
-		if (IsValid(InEventBusRef))
-		{
-			return Callable(InEventBusRef, Forward<TArgs>(Args)...);
-		}
-		
-		if constexpr (!std::is_void_v<ReturnType>)
-		{
-			return ReturnType{};
-		}
-	}
-
-	/**
 	 * Core implementation shared by all Add* variants.
 	 *
 	 * Acquires a write lock, then either:
-	 *   - Finds the existing container for GameplayTag, verifies its type matches
-	 *     FEventContainerType, invokes Callable to bind the delegate, and increments
-	 *     the subscriber count.
-	 *   - Creates a new container if none exists, then does the same.
+	 * - Finds the existing container for GameplayTag, verifies its type matches
+	 * FEventContainerType, invokes Callable to bind the delegate, and increments
+	 * the subscriber count.
+	 * - Creates a new container if none exists, then does the same.
 	 *
 	 * Callable receives a typed TEventContainer<TContainerArgs> reference and any
 	 * additional Args, and must return an FDelegateHandle.
@@ -1009,8 +909,11 @@ private:
 		const TSharedPtr<IEventContainerBase>& ActualType,
 		const FStringView EnsureMessage)
 	{
+		const uint64 ExpectedTypeId = TExpectedType::StaticGetTypeID();
+		const uint64 ActualTypeId   = ActualType->GetTypeID();
+		
 		return ensureMsgf(
-			TExpectedType::StaticGetTypeID() == ActualType->GetTypeID(),								  					    
+			ExpectedTypeId == ActualTypeId,								  					    
 				TEXT("%s\n"
 			 		"[Given Types: %s]\n"  										  					  		
 			 		"[Wanted Types: %s]"),

@@ -18,9 +18,9 @@ static const int32 MinPoolSizeTest = 10;
 
 // --- TEST GROUP DEFINITION ---
 // Flags: Editor Context (needs World), Product Filter (standard tests)
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPoolSystemReuseTest, "Project.PoolSystem.Reuse", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPoolSystemPerformanceTest, "Project.PoolSystem.Performance", EAutomationTestFlags::EditorContext | EAutomationTestFlags::PerfFilter)
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPoolSystemCapacityTest, "Project.PoolSystem.Capacity", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPoolSystemReuseTest, "Logicraft.PoolSystem.Reuse", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPoolSystemPerformanceTest, "Logicraft.PoolSystem.Performance", EAutomationTestFlags::EditorContext | EAutomationTestFlags::PerfFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPoolSystemCapacityTest, "Logicraft.PoolSystem.Capacity", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
 
 /**
