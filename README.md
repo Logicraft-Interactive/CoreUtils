@@ -34,15 +34,15 @@ LogicraftCoreUtils is a C++ plugin for Unreal Engine 5.7 that provides a collect
 
 The plugin currently ships seven core modules:
 
-| Module | Purpose | Subsystem Type |
-|--------|---------|----------------|
-| **Chain** | Null-safe method chaining (Maybe Monad) | None (free functions) |
-| **EventBus** | Type-safe, thread-safe event bus using Gameplay Tags | `UGameInstanceSubsystem` |
-| **Linq** | LINQ-style lazy query operations on containers | None (free functions) |
-| **TimerHolder** | RAII timer wrapper with automatic cleanup | None (value type) |
-| **Pool System** | Actor object pooling with auto-shrink | `UWorldSubsystem` |
-| **Save System** | Actor/component serialization with version migration | `UGameInstanceSubsystem` |
-| **Runtime Property Editor** | Slate-based property editor for packaged builds | `UWorldSubsystem` |
+| Module | Purpose | Subsystem Type | Blueprint Support |
+|--------|---------|----------------|-------------------|
+| **Chain** | Null-safe method chaining (Maybe Monad) | None (free functions) | C++ Only |
+| **EventBus** | Type-safe, thread-safe event bus using Gameplay Tags | `UGameInstanceSubsystem` | C++ Only |
+| **Linq** | LINQ-style lazy query operations on containers | None (free functions) | C++ Only |
+| **TimerHolder** | RAII timer wrapper with automatic cleanup | None (value type) | C++ Only |
+| **Pool System** | Actor object pooling with auto-shrink | `UWorldSubsystem` | Blueprint & C++ |
+| **Save System** | Actor/component serialization with version migration | `UGameInstanceSubsystem` | Blueprint & C++ |
+| **Runtime Property Editor** | Slate-based property editor for packaged builds | `UWorldSubsystem` | Blueprint & C++ |
 
 ---
 
