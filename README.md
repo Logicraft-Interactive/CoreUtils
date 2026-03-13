@@ -39,7 +39,7 @@ The plugin ships seven core modules:
 | **TimerHolder** | RAII timer wrapper with automatic cleanup | None (value type) |
 | **Pool System** | Actor object pooling with auto-shrink | `UWorldSubsystem` |
 | **Save System** | Actor/component serialization with version migration | `UGameInstanceSubsystem` |
-| **Runtime Property Editor** | In-game Slate-based property editing window | `UWorldSubsystem` |
+| **Runtime Property Editor** | Slate-based property editor for packaged builds | `UWorldSubsystem` |
 
 ---
 
@@ -507,7 +507,11 @@ During deserialization, when the saved version does not match the current versio
 
 > Headers: `RuntimePropertyEditor/RuntimePropertyEditor.h`, `RuntimePropertyEditor/RuntimePropertyEditorSubsystem.h`, `RuntimePropertyEditor/PropertyBuilder.h`, `RuntimePropertyEditor/RuntimeEditable.h`, `RuntimePropertyEditor/RuntimePropertyHelper.h`, `RuntimePropertyEditor/SlateFontHelper.h`, `RuntimePropertyEditor/RuntimePropertyEditorSettings.h`
 
-An in-game Slate-based property editor that allows inspecting and modifying UObject properties at runtime through a dedicated OS-level window.
+A Slate-based property editor designed primarily for **packaged builds**. In a packaged build, Unreal Engine's editor tools (Details panel, property inspectors) are no longer available, making it impossible to inspect or tweak object properties on the fly. The Runtime Property Editor fills that gap by providing a dedicated OS-level window that lets you browse registered objects and modify their exposed properties in real time, directly inside the running game. Objects must be explicitly registered via `RegisterEditableObject` and implement the `IRuntimeEditable` interface to appear in the editor.
+
+While the system technically works in the editor as well, it offers little practical value there since the built-in Details panel already provides full property editing capabilities. The real utility of this module emerges in packaged builds, where it becomes the only way to inspect and adjust the properties of actors and objects without restarting the application.
+
+Typical use cases include runtime debugging of gameplay variables, live-tuning of parameters during QA sessions, and providing designers with a lightweight in-game inspection tool that does not require the full Unreal Editor.
 
 #### Architecture
 
