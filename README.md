@@ -29,7 +29,8 @@ Developed by [Logicraft Interactive](https://github.com/Logicraft-Interactive).
 
 LogicraftCoreUtils is a C++ plugin for Unreal Engine 5.7 that provides a collection of systems commonly needed in game development. Each module is designed around modern C++20 patterns (concepts, consteval, CRTP) and integrates tightly with Unreal Engine conventions (subsystems, `UPROPERTY`, `UFUNCTION`, Gameplay Tags, Slate).
 
-> **⚠️ Work in Progress** — This plugin is under active development. Existing features are not necessarily final and their APIs may change or be reworked. Additional modules and features will be added over time.
+> [!WARNING]
+> Work in Progress — This plugin is under active development. Existing features are not necessarily final and their APIs may change or be reworked. Additional modules and features will be added over time.
 
 The plugin currently ships seven core modules:
 
