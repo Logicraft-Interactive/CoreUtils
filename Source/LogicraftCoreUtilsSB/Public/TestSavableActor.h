@@ -1,33 +1,26 @@
-// Copyright (c) Logicraft Interactive. All Rights Reserved.
+﻿// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "SaveSystem/SaveComponent.h"
+#include "SaveSystem/SavableActor.h"
 #include "TestSavableActor.generated.h"
 
 class UTestSavableActorComponent;
 
+
 UCLASS()
-class LOGICRAFTCOREUTILSSB_API UTestSavableComponent_Save : public USaveComponent
+class LOGICRAFTCOREUTILSSB_API ATestSavableActor : public AActor, public ISavableActor
 {
 	GENERATED_BODY()
 
 public:
-	virtual FString GetSaveVersion_Implementation() override;
-	virtual void SetupSaveMigrateLogic_Implementation() override;
-};
-
-UCLASS()
-class LOGICRAFTCOREUTILSSB_API ATestSavableActor : public AActor
-{
-	GENERATED_BODY()
-
-public:
+	// Sets default values for this actor's properties
 	ATestSavableActor();
 
 protected:
+	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 	UPROPERTY(SaveGame)
@@ -40,11 +33,13 @@ protected:
 	TObjectPtr<UTestSavableActorComponent> SavableActorComponent;
 
 	UPROPERTY(EditAnywhere)
-	TObjectPtr<UTestSavableComponent_Save> SaveComponent;
-
-	UPROPERTY(EditAnywhere)
 	bool bDynamicSpawned = false;
+	
+	virtual FString GetVersion_Implementation() override;
+
+	virtual void SetupSaveMigrateLogic_Implementation() override;
 
 public:
+	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 };
