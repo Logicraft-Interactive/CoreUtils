@@ -1,14 +1,14 @@
-﻿{
+{
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0",
+	"VersionName": "1.13.3",
 	"FriendlyName": "LogicraftCoreUtils",
 	"Description": "Plugin containing functions, classes, and structs that make Unreal C++ code more readable and simplify it in general.",
-	"Category": "Other",
+	"Category": "Programming",
 	"CreatedBy": "Logicraft Interactive",
-    "EngineVersion": "5.7",
-	"CreatedByURL": "",
-	"DocsURL": "",
+	"EngineVersion": "5.7",
+	"CreatedByURL": "https://github.com/Logicraft-Interactive",
+	"DocsURL": "https://github.com/Logicraft-Interactive/Core-Utils/blob/main/README.md",
 	"MarketplaceURL": "",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
@@ -20,5 +20,6 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
-	]
+	],
+	"SupportURL": "https://github.com/Logicraft-Interactive/Core-Utils/issues"
 }
