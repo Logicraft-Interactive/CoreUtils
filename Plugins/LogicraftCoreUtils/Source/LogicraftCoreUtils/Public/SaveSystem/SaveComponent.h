@@ -16,6 +16,7 @@
  * so migration logic can remap or default values as needed.
  */
 DECLARE_DYNAMIC_DELEGATE_FourParams(FComponentMigrateEventSignature, AActor*, Actor, FString, FromVersion, FString, ToVersion, const TArray<FPropertySaveData>&, OldPropertyArray);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetupMigrateLogicSignature);
 
 /**
  * USaveComponent
@@ -35,7 +36,7 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(FComponentMigrateEventSignature, AActor*, Ac
  * override SetupSaveMigrateLogic in a subclass (C++ or BP) and call
  * AddMigrateDelegate / AddMigrateDelegateLambda to register migration steps.
  */
-UCLASS(ClassGroup=(SaveSystem), meta=(BlueprintSpawnableComponent), Blueprintable)
+UCLASS(ClassGroup=(SaveSystem), meta=(BlueprintSpawnableComponent), Blueprintable, DisplayName = "Save Component")
 class LOGICRAFTCOREUTILS_API USaveComponent : public UActorComponent
 {
 	GENERATED_BODY()
@@ -55,7 +56,7 @@ public:
 
 	/** @brief Returns the unique identifier of the owning actor. */
 	UFUNCTION(BlueprintPure, Category = "Save System")
-	FString GetUniqueID() const;
+	FString GetSaveUniqueID() const;
 
 	/** @brief Returns the class used to re-spawn the owning actor if it is dynamic. */
 	UFUNCTION(BlueprintPure, Category = "Save System")
@@ -75,11 +76,10 @@ public:
 
 	/**
 	 * @brief Entry point for registering version migration delegates.
-	 * Called once on each class CDO during USaveSubsystem::Initialize.
-	 * Override to register migration steps via AddMigrateDelegate / AddMigrateDelegateLambda.
+	 * Called once on each class CDO during USaveSubsystem::Initialize. 
 	 */
-	UFUNCTION(BlueprintNativeEvent, Category = "Save System", DisplayName = "Setup Save Migrate Logic")
-	void SetupSaveMigrateLogic();
+	UPROPERTY(BlueprintAssignable, Category = "Save System", DisplayName = "Setup Save Migrate Logic")
+	FSetupMigrateLogicSignature OnSetupSaveMigrateLogic;
 
 	/**
 	 * @brief Registers a Blueprint migration delegate for a specific version transition.
@@ -104,7 +104,12 @@ public:
 	template<typename Func>
 	void AddMigrateDelegateLambda(const FString& FromVersion, const FString& ToVersion, Func&& Lambda)
 	{
-		UClass* Class = GetClass();
+		if (!GetOwner())
+		{
+			return;
+		}
+	
+		UClass* Class = GetOwner()->GetClass();
 		if (!Class)
 		{
 			return;

@@ -16,7 +16,6 @@ class LOGICRAFTCOREUTILSSB_API UTestSavableComponent_Save : public USaveComponen
 
 public:
 	virtual FString GetSaveVersion_Implementation() override;
-	virtual void SetupSaveMigrateLogic_Implementation() override;
 };
 
 UCLASS()

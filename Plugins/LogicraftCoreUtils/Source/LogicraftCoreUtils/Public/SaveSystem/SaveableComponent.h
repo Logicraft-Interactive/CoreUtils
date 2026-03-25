@@ -33,7 +33,7 @@ DECLARE_DYNAMIC_DELEGATE_FourParams(FSaveableComponentMigrateEventSignature, USa
  *
  * Version migration uses a per-class static delegate map, identical to USaveComponent.
  */
-UCLASS(ClassGroup=(SaveSystem), meta=(BlueprintSpawnableComponent), Blueprintable)
+UCLASS(ClassGroup=(SaveSystem), meta=(BlueprintSpawnableComponent), Blueprintable, DisplayName = "Saveable Component")
 class LOGICRAFTCOREUTILS_API USaveableComponent : public UActorComponent
 {
 	GENERATED_BODY()

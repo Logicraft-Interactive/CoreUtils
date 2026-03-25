@@ -117,7 +117,7 @@ TMap<FString, AActor*> USaveSubsystem::BuildStaticActorSpawnedMap() const
 
 		if (!SaveComp->GetIsDynamicSpawned())
 		{
-			ActorMap.Add(SaveComp->GetUniqueID(), *It);
+			ActorMap.Add(SaveComp->GetSaveUniqueID(), *It);
 		}
 	}
 	return ActorMap;
@@ -129,21 +129,24 @@ void USaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
 	{
 		UClass* CurrentClass = *ClassIterator;
-        
-		if (CurrentClass && CurrentClass->IsChildOf(USaveComponent::StaticClass()) && !CurrentClass->HasAnyClassFlags(CLASS_Abstract))
+
+		if (CurrentClass && CurrentClass->IsChildOf(AActor::StaticClass()))
 		{
-			if (USaveComponent* CDO = CurrentClass->GetDefaultObject<USaveComponent>())
+			if (AActor* CDO = CurrentClass->GetDefaultObject<AActor>())
 			{
-				CDO->SetupSaveMigrateLogic();
+				if (auto Component = CDO->GetComponentByClass<USaveComponent>())
+				{
+					Component->OnSetupSaveMigrateLogic.Broadcast();
+				}
 			}
 		}
-		else if (CurrentClass && CurrentClass->IsChildOf(USaveableComponent::StaticClass()) && !CurrentClass->HasAnyClassFlags(CLASS_Abstract))
+		else if (CurrentClass && CurrentClass->IsChildOf(USaveableComponent::StaticClass()))
 		{
 			if (USaveableComponent* CDO = CurrentClass->GetDefaultObject<USaveableComponent>())
 			{
 				CDO->SetupSaveMigrateLogic();
 			}
-		}
+		}		
 	}
 }
 
@@ -168,7 +171,7 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(USaveComponent* SaveC
 	SaveData.ObjectClass = SaveData.bIsDynamicSpawned
 		? TSubclassOf<UObject>(SaveComp->GetDynamicSpawnClass().Get())
 		: TSubclassOf<UObject>(Actor->GetClass());
-	SaveData.ObjectID = SaveComp->GetUniqueID();
+	SaveData.ObjectID = SaveComp->GetSaveUniqueID();
 	SaveData.SaveVersion = SaveComp->GetSaveVersion();
 	SaveData.SpawnTransform = Actor->GetTransform();
 	

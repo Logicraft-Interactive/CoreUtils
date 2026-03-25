@@ -2,6 +2,8 @@
 
 #include "SaveSystem/SaveComponent.h"
 
+#include "LogCategory.h"
+
 USaveComponent::USaveComponent()
 {
 	PrimaryComponentTick.bCanEverTick = false;
@@ -14,7 +16,7 @@ void USaveComponent::SetIsDynamicSpawned(TSubclassOf<AActor> SpawnClass, FGuid U
 	bIsDynamicSpawned = true;
 }
 
-FString USaveComponent::GetUniqueID() const
+FString USaveComponent::GetSaveUniqueID() const
 {
 	if (bIsDynamicSpawned)
 	{
@@ -38,14 +40,16 @@ FString USaveComponent::GetSaveVersion_Implementation()
 {
 	return TEXT("1.0.0");
 }
-
-void USaveComponent::SetupSaveMigrateLogic_Implementation()
-{
-}
+ 
 
 void USaveComponent::AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FComponentMigrateEventSignature Delegate)
 {
-	UClass* Class = GetClass();
+	if (!GetOwner())
+	{
+		return;
+	}
+	
+	UClass* Class = GetOwner()->GetClass();
 	if (!Class)
 	{
 		return;
@@ -61,6 +65,8 @@ void USaveComponent::AddMigrateDelegate(const FString& FromVersion, const FStrin
 		Delegate.ExecuteIfBound(Actor, FromVer, ToVersion, OldPropertyArray);
 		return ToVersion;
 	});
+
+	UE_LOG(LogTemp, Error, TEXT("Migrate delegate added for migration from %s to %s"), *FromVersion, *ToVersion)
 }
 
 const USaveComponent::FDelegateMapType& USaveComponent::GetMigrateDelegateMap(const UObject* Object)

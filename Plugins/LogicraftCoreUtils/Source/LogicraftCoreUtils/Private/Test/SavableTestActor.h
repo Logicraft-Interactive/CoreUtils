@@ -32,20 +32,6 @@ public:
 };
 
 UCLASS()
-class USavableTestSaveComponent : public USaveComponent
-{
-	GENERATED_BODY()
-
-public:
-	virtual FString GetSaveVersion_Implementation() override { return TEXT("1.0.0"); }
-
-	virtual void SetupSaveMigrateLogic_Implementation() override
-	{
-		UE_LOG(LogSaveSystem, Log, TEXT("Setup Save Migrating"));
-	}
-};
-
-UCLASS()
 class ASavableTestActor : public AActor
 {
 	GENERATED_BODY()
@@ -54,7 +40,7 @@ public:
 	ASavableTestActor()
 	{
 		PrimaryActorTick.bCanEverTick = false;
-		SaveComponent = CreateDefaultSubobject<USavableTestSaveComponent>(TEXT("SaveComponent"));
+		SaveComponent = CreateDefaultSubobject<USaveComponent>(TEXT("SaveComponent"));
 		SavableComponent = CreateDefaultSubobject<USavableTestComponent>(TEXT("SavableTestComponent"));
 	}
 
@@ -74,7 +60,7 @@ public:
 	FVector Position = FVector::ZeroVector;
 
 	UPROPERTY()
-	TObjectPtr<USavableTestSaveComponent> SaveComponent;
+	TObjectPtr<USaveComponent> SaveComponent;
 
 	UPROPERTY()
 	TObjectPtr<USavableTestComponent> SavableComponent;
