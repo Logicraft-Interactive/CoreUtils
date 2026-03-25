@@ -21,3 +21,15 @@ public:
 	virtual void OnReturn_Implementation() override {}
 	
 };
+
+UCLASS()
+class APoolOwnerTestActor : public AActor
+{
+	GENERATED_BODY()
+public:
+
+	UPROPERTY()
+	UPoolObject* PoolObject;
+	
+};
+

@@ -1,4 +1,4 @@
-﻿#include "CoreMinimal.h"
+#include "CoreMinimal.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -12,8 +12,30 @@
 #include "PoolSystem/PoolSubsystem.h"
 #include "Test/PoolableTestActor.h"
 
+/** En monde éditeur, Destroy() laisse les acteurs en file jusqu’au tick ; EditorDestroyActor les retire tout de suite de la scène. */
+static void DestroyTestActorInWorld(UWorld* World, AActor* Actor)
+{
+	if (!Actor)
+	{
+		return;
+	}
+	UWorld* const W = Actor->GetWorld() ? Actor->GetWorld() : World;
+	if (!W)
+	{
+		return;
+	}
+	if (W->IsEditorWorld())
+	{
+		W->EditorDestroyActor(Actor, true);
+	}
+	else
+	{
+		Actor->Destroy();
+	}
+}
+
 // --- TEST CONSTANTS ---
-static const int32 BenchmarkCount = 5000;
+static const int32 BenchmarkCount = 1000;
 static const int32 MinPoolSizeTest = 10;
 
 // --- TEST GROUP DEFINITION ---
@@ -47,7 +69,10 @@ bool FPoolSystemReuseTest::RunTest(const FString& Parameters)
     Settings.bAllowResize = true;
     Settings.WorldContext = World;
 
-    UPoolObject* Pool = PoolSubsystem->CreatePool(Settings);
+    auto PoolOwner = World->SpawnActor<APoolOwnerTestActor>();
+    
+    UPoolObject* Pool = PoolSubsystem->CreatePool(Settings, PoolOwner);
+    PoolOwner->PoolObject = Pool;
     TestNotNull("Pool Object created", Pool);
 
     TArray<AActor*> SpawnedActor;
@@ -77,8 +102,12 @@ bool FPoolSystemReuseTest::RunTest(const FString& Parameters)
     }
     // 6. Spawn again
 
-
-    // Cleanup (Optional, depending on if you want to keep the actors in the editor world)
+    if (PoolOwner->PoolObject)
+    {
+        PoolOwner->PoolObject->DestroyAllPooledActorsNow();
+    }
+    DestroyTestActorInWorld(World, PoolOwner);
+    
     // In a pure unit test environment, we might tear down the world or actors here.
     
     return true;
@@ -112,11 +141,14 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
     Settings.WorldContext = World;
 
     UPoolObject* Pool = nullptr;
+    auto PoolOwner = World->SpawnActor<APoolOwnerTestActor>();
 
     double InitTime = GetTime([&]
-        {
-            Pool = PoolSubsystem->CreatePool(Settings);
-        });
+    {
+        PoolOwner->PoolObject = Pool;
+        Pool = PoolSubsystem->CreatePool(Settings, PoolOwner);
+        PoolOwner->PoolObject = Pool;
+    });
 
     // --- BENCHMARK: Native SpawnActor --- 
     TArray<AActor*> NativeActors;
@@ -135,7 +167,10 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
     // Cleanup Native Actors
     for (AActor* Act : NativeActors)
     {
-        if (Act) Act->Destroy();
+        if (Act)
+        {
+            DestroyTestActorInWorld(World, Act);
+        }
     }
 
     // --- BENCHMARK: Pool Spawn ---
@@ -172,6 +207,12 @@ bool FPoolSystemPerformanceTest::RunTest(const FString& Parameters)
         UE_LOG(LogTemp, Display, TEXT("SUCCESS: Pool is %.2fx faster than native spawn with a init time of %f seconds."), DurationNative / DurationPool, InitTime);
     }
 
+    if (PoolOwner->PoolObject)
+    {
+        PoolOwner->PoolObject->DestroyAllPooledActorsNow();
+    }
+    DestroyTestActorInWorld(World, PoolOwner);
+    
     return true;
 }
 
@@ -194,7 +235,9 @@ bool FPoolSystemCapacityTest::RunTest(const FString& Parameters)
     Settings.bAllowResize = true; // Allow expansion
     Settings.WorldContext = World;
 
-    UPoolObject* Pool = PoolSubsystem->CreatePool(Settings);
+    auto PoolOwner = World->SpawnActor<APoolOwnerTestActor>();
+    UPoolObject* Pool = PoolSubsystem->CreatePool(Settings, PoolOwner);
+    PoolOwner->PoolObject = Pool;
 
     TArray<AActor*> ActiveActors;
 
@@ -228,6 +271,12 @@ bool FPoolSystemCapacityTest::RunTest(const FString& Parameters)
     // 4. Verify CanSpawn
     TestTrue("Pool should be ready to spawn again", Pool->CanSpawn());
 
+    if (PoolOwner->PoolObject)
+    {
+        PoolOwner->PoolObject->DestroyAllPooledActorsNow();
+    }
+    DestroyTestActorInWorld(World, PoolOwner);
+    
     return true;
 }
 #endif

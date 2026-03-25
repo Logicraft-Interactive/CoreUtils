@@ -1,9 +1,30 @@
-﻿// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
+// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
 
 #include "PoolSystem/PoolObject.h"
 
 #include "PoolSystem/Poolable.h"
 #include "Engine/World.h"
+
+namespace
+{
+void DestroyPooledActorInWorld(UWorld* World, AActor* Actor)
+{
+	if (!IsValid(Actor))
+	{
+		return;
+	}
+	// Toujours le monde de l'acteur : PoolSettings.WorldContext peut diverger (sous-niveaux, etc.).
+	UWorld* const W = Actor->GetWorld() ? Actor->GetWorld() : World;
+#if WITH_EDITOR
+	if (W && W->IsEditorWorld())
+	{
+		W->EditorDestroyActor(Actor, true);
+		return;
+	}
+#endif
+	Actor->Destroy();
+}
+} // namespace
 
 AActor* UPoolObject::GetActor(const IPoolable* Poolable)
 {
@@ -119,7 +140,7 @@ void UPoolObject::ShrinkRoutine()
 			AActor* ActorToDestroy = GetActor(PoolableInfo.Poolable);
 			if (IsValid(ActorToDestroy))
 			{
-				ActorToDestroy->Destroy();
+				DestroyPooledActorInWorld(PoolSettings.WorldContext.IsValid() ? PoolSettings.WorldContext.Get() : nullptr, ActorToDestroy);
 			}
 
 			PoolArray.RemoveAtSwap(i);
@@ -134,12 +155,23 @@ void UPoolObject::ShrinkRoutine()
 	FindNextIndex();
 }
 
-void UPoolObject::BeginDestroy()
+void UPoolObject::DestroyAllPooledActorsNow()
 {
+	ShrinkRoutineTimer.Clear();
+	IndexQueue.Empty();
+	NextIndex = NullOpt;
+
+	UWorld* World = PoolSettings.WorldContext.IsValid() ? PoolSettings.WorldContext.Get() : nullptr;
 	for (auto Element : PoolArray)
 	{
-		GetActor(Element.Poolable)->Destroy();
+		DestroyPooledActorInWorld(World, GetActor(Element.Poolable));
 	}
+	PoolArray.Empty();
+}
+
+void UPoolObject::BeginDestroy()
+{
+	DestroyAllPooledActorsNow();
 	Super::BeginDestroy();
 }
 

@@ -14,16 +14,16 @@ void UPoolSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-UPoolObject* UPoolSubsystem::CreatePool(FPoolSettings PoolSettings)
-{	
+UPoolObject* UPoolSubsystem::CreatePool(FPoolSettings PoolSettings, UObject* PoolOwner)
+{
 	PoolSettings.WorldContext = GetWorld();
-	UPoolObject* NewPoolObject = NewObject<UPoolObject>(this);
+	UPoolObject* NewPoolObject = NewObject<UPoolObject>(PoolOwner);
 	NewPoolObject->SetupPoolObject(PoolSettings);
 
 	return NewPoolObject;
 }
 
-UPoolObject* UPoolSubsystem::CreatePoolFromDataAsset(UPoolSettingsDataAsset* PoolSettings)
+UPoolObject* UPoolSubsystem::CreatePoolFromDataAsset(UPoolSettingsDataAsset* PoolSettings, UObject* PoolOwner)
 {
 	if (!PoolSettings)
 	{
@@ -34,7 +34,7 @@ UPoolObject* UPoolSubsystem::CreatePoolFromDataAsset(UPoolSettingsDataAsset* Poo
 	FPoolSettings NewPoolSettings = PoolSettings->PoolSettings;
 	NewPoolSettings.WorldContext = GetWorld();
 	
-	UPoolObject* NewPoolObject = NewObject<UPoolObject>(this);
+	UPoolObject* NewPoolObject = NewObject<UPoolObject>(PoolOwner);
 	NewPoolObject->SetupPoolObject(NewPoolSettings);
 
 	return NewPoolObject;

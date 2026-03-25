@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
+// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
 
 #pragma once
 
@@ -123,5 +123,12 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pool|Object")
 	void ReturnToPool(AActor* PoolableActor);
+
+	/**
+	 * Détruit immédiatement tous les acteurs du pool (en éditeur : retrait de la scène sans attendre le tick).
+	 * À appeler avant de détruire le propriétaire du pool si tu dois que le niveau soit net dès la fin du test ou du shutdown.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Pool|Object")
+	void DestroyAllPooledActorsNow();
 	
 };

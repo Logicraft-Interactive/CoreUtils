@@ -40,17 +40,19 @@ public:
 	/**
 	 * Creates a new Object Pool based on the provided settings struct.
 	 * * @param PoolSettings - The configuration (class, size, resize policy) for the new pool.
+	 * * @param PoolOwner - Owner of the new pool.
 	 * * @return A new UPoolObject instance meant to manage the specified actor class.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pool|Subsystem", meta = (ReturnDisplayName = "Pool Object"))
-	UPoolObject* CreatePool(FPoolSettings PoolSettings);
+	UPoolObject* CreatePool(FPoolSettings PoolSettings, UObject* PoolOwner);
 	
 	/**
 	 * Creates a new Object Pool using a Data Asset for configuration.
 	 * This is the preferred method for designer-friendly workflows.
 	 * * @param PoolSettings - The Data Asset containing the pool configuration.
+	 * * @param PoolOwner - Owner of the new pool.
 	 * * @return A new UPoolObject instance, or nullptr if the asset is invalid.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Pool|Subsystem", meta = (ReturnDisplayName = "Pool Object"))
-	UPoolObject* CreatePoolFromDataAsset(UPoolSettingsDataAsset* PoolSettings);
+	UPoolObject* CreatePoolFromDataAsset(UPoolSettingsDataAsset* PoolSettings, UObject* PoolOwner);
 };

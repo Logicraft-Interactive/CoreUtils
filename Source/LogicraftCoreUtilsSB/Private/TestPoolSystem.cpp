@@ -33,7 +33,7 @@ void ATestPoolSystem::BeginPlay()
 		.WorldContext = GetWorld(),
  		.bAllowResize = false,
 		.MinPoolSize = 50
-	});
+	}, this);
 
 	
 	SpawnHolder.Schedule(this, &ThisClass::Spawn, FTimerParameters{.bIsLooping = true, .Rate = 1.f/4});
