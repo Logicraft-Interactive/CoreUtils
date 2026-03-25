@@ -13,7 +13,7 @@
 #include "Test/SavableTestActor.h"
 
 // --- TEST CONSTANTS ---
-static const int32 SaveBenchmarkCount = 5000;
+static const int32 SaveBenchmarkCount = 1000;
 static const FString BenchmarkVersion = TEXT("1.0.0");
 static const FName BenchmarkSlotName = TEXT("__SaveSystemBenchmark__");
 

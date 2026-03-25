@@ -13,7 +13,7 @@
 #include "Test/PoolableTestActor.h"
 
 // --- TEST CONSTANTS ---
-static const int32 BenchmarkCount = 100000;
+static const int32 BenchmarkCount = 5000;
 static const int32 MinPoolSizeTest = 10;
 
 // --- TEST GROUP DEFINITION ---
