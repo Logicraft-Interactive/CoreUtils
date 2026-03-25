@@ -5,6 +5,8 @@
 #include "Misc/Paths.h"
 #include "Styling/CoreStyle.h"
 
+#pragma warning( push )
+#pragma warning( disable : 4996 )
 FSlateFontInfo SlateFontStyleHelper::GetFontStyle(FStringView FontPath, float FontSize)
 {
 	return FSlateFontInfo{ FontPath.GetData(), FontSize };
@@ -52,3 +54,4 @@ FSlateFontInfo SlateFontStyleHelper::GetSlateFontStyleSafe(FStringView FontName,
 	
 	return FCoreStyle::GetDefaultFontStyle("Regular", FontSize);
 }
+#pragma warning( pop )

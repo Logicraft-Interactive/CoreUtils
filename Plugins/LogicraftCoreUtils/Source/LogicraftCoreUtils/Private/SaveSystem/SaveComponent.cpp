@@ -43,7 +43,7 @@ void USaveComponent::SetupSaveMigrateLogic_Implementation()
 {
 }
 
-void USaveComponent::AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FActorMigrateEventSignature Delegate)
+void USaveComponent::AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FComponentMigrateEventSignature Delegate)
 {
 	UClass* Class = GetClass();
 	if (!Class)

@@ -15,7 +15,7 @@
  * the source and target version strings, and the old property array
  * so migration logic can remap or default values as needed.
  */
-DECLARE_DYNAMIC_DELEGATE_FourParams(FActorMigrateEventSignature, AActor*, Actor, FString, FromVersion, FString, ToVersion, const TArray<FPropertySaveData>&, OldPropertyArray);
+DECLARE_DYNAMIC_DELEGATE_FourParams(FComponentMigrateEventSignature, AActor*, Actor, FString, FromVersion, FString, ToVersion, const TArray<FPropertySaveData>&, OldPropertyArray);
 
 /**
  * USaveComponent
@@ -88,7 +88,7 @@ public:
 	 * @param Delegate Dynamic delegate to execute.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Save System")
-	void AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FActorMigrateEventSignature Delegate);
+	void AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FComponentMigrateEventSignature Delegate);
 
 	/**
 	 * @brief Registers a C++ lambda as a migration delegate for a specific version transition.

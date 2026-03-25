@@ -16,7 +16,7 @@ void USaveableComponent::SetupSaveMigrateLogic_Implementation()
 {
 }
 
-void USaveableComponent::AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FComponentMigrateEventSignature Delegate)
+void USaveableComponent::AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FSaveableComponentMigrateEventSignature Delegate)
 {
 	UClass* Class = GetClass();
 	if (!Class)

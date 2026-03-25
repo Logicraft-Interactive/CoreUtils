@@ -16,7 +16,7 @@ class USaveableComponent;
  * the current version. Receives the component being migrated, the source and target
  * version strings, and the old property array for remapping.
  */
-DECLARE_DYNAMIC_DELEGATE_FourParams(FComponentMigrateEventSignature, USaveableComponent*, Component, FString, FromVersion, FString, ToVersion, const TArray<FPropertySaveData>&, OldPropertyArray);
+DECLARE_DYNAMIC_DELEGATE_FourParams(FSaveableComponentMigrateEventSignature, USaveableComponent*, Component, FString, FromVersion, FString, ToVersion, const TArray<FPropertySaveData>&, OldPropertyArray);
 
 /**
  * USaveableComponent
@@ -64,7 +64,7 @@ public:
 	 * @param Delegate Dynamic delegate to execute.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Save System")
-	void AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FComponentMigrateEventSignature Delegate);
+	void AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FSaveableComponentMigrateEventSignature Delegate);
 
 	/**
 	 * @brief Registers a C++ lambda as a migration delegate for a specific version transition.
