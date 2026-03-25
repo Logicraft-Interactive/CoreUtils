@@ -2,7 +2,7 @@
 
 #include "SaveSystem/SaveComponent.h"
 
-#include "LogCategory.h"
+
 
 USaveComponent::USaveComponent()
 {
@@ -60,22 +60,30 @@ void USaveComponent::AddMigrateDelegate(const FString& FromVersion, const FStrin
 		MigratesDelegateMap.Add(Class);
 	}
 	
+	if (MigratesDelegateMap[Class].Find(FromVersion))
+	{
+		return;
+	}
+		
 	MigratesDelegateMap[Class].Add(FromVersion, [Delegate, ToVersion](AActor* Actor, FString FromVer, const TArray<FPropertySaveData>& OldPropertyArray)
 	{
 		Delegate.ExecuteIfBound(Actor, FromVer, ToVersion, OldPropertyArray);
 		return ToVersion;
 	});
-
-	UE_LOG(LogTemp, Error, TEXT("Migrate delegate added for migration from %s to %s"), *FromVersion, *ToVersion)
 }
 
-const USaveComponent::FDelegateMapType& USaveComponent::GetMigrateDelegateMap(const UObject* Object)
+USaveComponent::FDelegateMapType& USaveComponent::GetMigrateDelegateMap(const UObject* Object)
 {
-	if (const auto* Found = MigratesDelegateMap.Find(Object->GetClass()))
+	if (auto* Found = MigratesDelegateMap.Find(Object->GetClass()))
 	{
 		return *Found;
 	}
 	return EmptyMap;
+}
+
+TMap<UClass*, USaveComponent::FDelegateMapType>& USaveComponent::GetAllMigrateDelegateMap()
+{
+	return MigratesDelegateMap;
 }
 
 void USaveComponent::OnPreSave_Implementation()

@@ -7,7 +7,9 @@
 #include "EngineUtils.h"
 #include "Internationalization/Regex.h"
 #include "LogCategory.h"
+#include "AssetRegistry/AssetRegistryModule.h"
 #include "Kismet/GameplayStatics.h"
+#include "SaveSystem/SaveableActor.h"
 #include "SaveSystem/SaveComponent.h"
 #include "SaveSystem/SaveableComponent.h"
 #include "Serialization/MemoryReader.h"
@@ -126,28 +128,65 @@ TMap<FString, AActor*> USaveSubsystem::BuildStaticActorSpawnedMap() const
 void USaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
-	for (TObjectIterator<UClass> ClassIterator; ClassIterator; ++ClassIterator)
-	{
-		UClass* CurrentClass = *ClassIterator;
+	TSet<UClass*> AlreadySetupClassSet;
+	USaveComponent::GetAllMigrateDelegateMap().Empty();
 
-		if (CurrentClass && CurrentClass->IsChildOf(AActor::StaticClass()))
-		{
-			if (AActor* CDO = CurrentClass->GetDefaultObject<AActor>())
-			{
-				if (auto Component = CDO->GetComponentByClass<USaveComponent>())
+
+	for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
+    {
+        UClass* CurrentClass = *ClassIt;
+        
+        if (CurrentClass->HasAnyClassFlags(CLASS_Abstract | CLASS_Deprecated | CLASS_NewerVersionExists))
+        {
+            continue;
+        }
+
+        if (CurrentClass->ImplementsInterface(USaveableActor::StaticClass()))
+        {
+            if (AActor* CDO = CurrentClass->GetDefaultObject<AActor>())
+            {
+            	ISaveableActor::Execute_SetupSaveMigrateLogic(CDO);
+            	AlreadySetupClassSet.Add(CDO->GetClass());
+            	UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class"), *CDO->GetClass()->GetName())
+            }
+        }
+    }
+
+
+    FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+    IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
+    
+
+    AssetRegistry.SearchAllAssets(true);
+
+    FARFilter Filter;
+    Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
+    Filter.bRecursiveClasses = true;
+
+    TArray<FAssetData> AssetList;
+    AssetRegistry.GetAssets(Filter, AssetList);
+
+    for (const FAssetData& Asset : AssetList)
+    {
+        FString ImplementedInterfaces;
+        if (Asset.GetTagValue(FBlueprintTags::ImplementedInterfaces, ImplementedInterfaces))
+        {
+            if (ImplementedInterfaces.Contains(TEXT("SaveableActor")))
+            {
+            	FString ClassPath = Asset.ToSoftObjectPath().ToString() + TEXT("_C");
+				if (UClass* LoadedBPClass = LoadClass<AActor>(nullptr, *ClassPath);
+					LoadedBPClass && !AlreadySetupClassSet.Contains(LoadedBPClass))        
 				{
-					Component->OnSetupSaveMigrateLogic.Broadcast();
-				}
-			}
-		}
-		else if (CurrentClass && CurrentClass->IsChildOf(USaveableComponent::StaticClass()))
-		{
-			if (USaveableComponent* CDO = CurrentClass->GetDefaultObject<USaveableComponent>())
-			{
-				CDO->SetupSaveMigrateLogic();
-			}
-		}		
-	}
+                    if (AActor* CDO = LoadedBPClass->GetDefaultObject<AActor>())
+                    {
+                        ISaveableActor::Execute_SetupSaveMigrateLogic(CDO);
+                    	AlreadySetupClassSet.Add(LoadedBPClass);
+                    	UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class"), *CDO->GetClass()->GetName())
+                    }
+                }
+            }
+        }
+    }
 }
 
 

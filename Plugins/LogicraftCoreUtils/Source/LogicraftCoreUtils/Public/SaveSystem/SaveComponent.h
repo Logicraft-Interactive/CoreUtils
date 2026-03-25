@@ -40,7 +40,7 @@ UCLASS(ClassGroup=(SaveSystem), meta=(BlueprintSpawnableComponent), Blueprintabl
 class LOGICRAFTCOREUTILS_API USaveComponent : public UActorComponent
 {
 	GENERATED_BODY()
-
+	
 public:
 	using FDelegateMapType = TMap<FString, TFunction<FString(AActor*, FString, const TArray<FPropertySaveData>&)>>;
 
@@ -75,17 +75,12 @@ public:
 	FString GetSaveVersion();
 
 	/**
-	 * @brief Entry point for registering version migration delegates.
-	 * Called once on each class CDO during USaveSubsystem::Initialize. 
-	 */
-	UPROPERTY(BlueprintAssignable, Category = "Save System", DisplayName = "Setup Save Migrate Logic")
-	FSetupMigrateLogicSignature OnSetupSaveMigrateLogic;
-
-	/**
-	 * @brief Registers a Blueprint migration delegate for a specific version transition.
+	* @brief Registers a Blueprint migration delegate for a specific version transition.\n
+	 * /!\ This function must be called inside the SetupSaveMigrateLogic function of the interface ISaveableActor.\n
+	 * This can result in an undefined behavior if you call it somewhere else.
 	 * @param FromVersion Source version that triggers this migration step.
 	 * @param ToVersion Target version after migration.
-	 * @param Delegate Dynamic delegate to execute.
+	* @param Delegate Dynamic delegate to execute.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Save System")
 	void AddMigrateDelegate(const FString& FromVersion, const FString& ToVersion, FComponentMigrateEventSignature Delegate);
@@ -94,7 +89,9 @@ public:
 	 * @brief Registers a C++ lambda as a migration delegate for a specific version transition.
 	 *
 	 * Delegates are stored in a static per-class map (keyed by UClass*) and apply
-	 * to all instances of the class. Typically called from SetupSaveMigrateLogic_Implementation().
+	 * to all instances of the class. \n
+	 * /!\ This function must be called inside the SetupSaveMigrateLogic function of the interface ISaveableActor.\n
+	 * This can result in an undefined behavior if you call it somewhere else.
 	 *
 	 * @tparam Func Callable accepting (AActor*, FString FromVersion, FString ToVersion, const TArray<FPropertySaveData>&).
 	 * @param FromVersion Source version that triggers this migration step.
@@ -128,7 +125,10 @@ public:
 	}
 
 	/** @brief Returns the migration delegate map for the given component's class. */
-	static const FDelegateMapType& GetMigrateDelegateMap(const UObject* Object);
+	static FDelegateMapType& GetMigrateDelegateMap(const UObject* Object);
+	
+	
+	static TMap<UClass*, FDelegateMapType>& GetAllMigrateDelegateMap();
 
 	// ---- Serialization lifecycle callbacks ----
 
@@ -145,6 +145,7 @@ public:
 	void OnPostLoad();
 
 protected:
+	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save System")
 	bool bIsDynamicSpawned = false;
 
