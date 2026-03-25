@@ -11,6 +11,12 @@ void ATestTimerHolder::BeginPlay()
 {
 	Super::BeginPlay();
 
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, []
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Start timer log"))
+	}, 10.f, false);
+	
 	LambdaTimerHolder.Schedule([]
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Start timer log"))

@@ -111,8 +111,8 @@ void URuntimePropertyEditorSubsystem::UnRegisterEditableObject(
 
 	const TSharedRef RemovedScrollBox{ EditableObjectsUIProperties[RuntimeEditableObject] };
 	EditableObjectsUIProperties.Remove(RuntimeEditableObject);
-
-	if (RuntimePropertyEditor->IsSelected(RemovedScrollBox))
+	
+	if (RuntimePropertyEditor.IsValid() && RuntimePropertyEditor->IsSelected(RemovedScrollBox))
 	{
 		RuntimePropertyEditor->DisplayObjectProperties(nullptr);
 		
