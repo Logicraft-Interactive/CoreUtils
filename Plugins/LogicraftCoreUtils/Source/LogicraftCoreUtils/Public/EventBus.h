@@ -917,8 +917,8 @@ private:
 				TEXT("%s\n"
 			 		"[Given Types: %s]\n"  										  					  		
 			 		"[Wanted Types: %s]"),
-			 		EnsureMessage.GetData(),								  					  		
-			 		*TExpectedType::StaticGetTypesName(), 											  					  	
-			 		*ActualType->GetTypesName());
+			 		EnsureMessage.GetData(),			 											  					  	
+			 		*ActualType->GetTypesName(),					  					  		
+			 		*TExpectedType::StaticGetTypesName());
 	}
 };
