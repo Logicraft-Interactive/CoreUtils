@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "LogCategory.h"
 #include "GameFramework/Actor.h"
+#include "SaveSystem/SaveableActor.h"
 #include "SaveSystem/SaveComponent.h"
 #include "SaveSystem/SaveableComponent.h"
 #include "SavableTestActor.generated.h"
@@ -32,7 +33,7 @@ public:
 };
 
 UCLASS()
-class ASavableTestActor : public AActor
+class ASavableTestActor : public AActor, public ISaveableActor
 {
 	GENERATED_BODY()
 
@@ -43,6 +44,8 @@ public:
 		SaveComponent = CreateDefaultSubobject<USaveComponent>(TEXT("SaveComponent"));
 		SavableComponent = CreateDefaultSubobject<USavableTestComponent>(TEXT("SavableTestComponent"));
 	}
+	
+	virtual void SetupSaveMigrateLogic_Implementation() override;
 
 	UPROPERTY(SaveGame)
 	int32 Health = 100;
@@ -65,3 +68,8 @@ public:
 	UPROPERTY()
 	TObjectPtr<USavableTestComponent> SavableComponent;
 };
+
+inline void ASavableTestActor::SetupSaveMigrateLogic_Implementation()
+{
+	ISaveableActor::SetupSaveMigrateLogic_Implementation();
+}

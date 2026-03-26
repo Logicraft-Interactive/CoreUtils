@@ -127,12 +127,16 @@ TMap<FString, AActor*> USaveSubsystem::BuildStaticActorSpawnedMap() const
 
 void USaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	Super::Initialize(Collection);
-	TSet<UClass*> AlreadySetupClassSet;
-	USaveComponent::GetAllMigrateDelegateMap().Empty();
+Super::Initialize(Collection);
+    TSet<UClass*> AlreadySetupClassSet;
+    USaveComponent::GetAllMigrateDelegateMap().Empty();
 
+    // Arrays to store the names of all valid C++ classes to check against Blueprints later
+    TArray<FString> ValidNativeActorClassNames;
+    TArray<FString> ValidNativeComponentClassNames;
 
-	for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
+    // 1. Scan loaded C++ classes
+    for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
     {
         UClass* CurrentClass = *ClassIt;
         
@@ -141,22 +145,36 @@ void USaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
             continue;
         }
 
-        if (CurrentClass->ImplementsInterface(USaveableActor::StaticClass()))
+        bool bIsSaveableActor = CurrentClass->ImplementsInterface(USaveableActor::StaticClass());
+        bool bIsSaveableComponent = CurrentClass->IsChildOf(USaveableComponent::StaticClass());
+
+        if (bIsSaveableActor)
         {
+            ValidNativeActorClassNames.Add(CurrentClass->GetName());
+
             if (AActor* CDO = CurrentClass->GetDefaultObject<AActor>())
             {
-            	ISaveableActor::Execute_SetupSaveMigrateLogic(CDO);
-            	AlreadySetupClassSet.Add(CDO->GetClass());
-            	UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class"), *CDO->GetClass()->GetName())
+                ISaveableActor::Execute_SetupSaveMigrateLogic(CDO);
+                AlreadySetupClassSet.Add(CDO->GetClass());
+                UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class (Native Actor)"), *CDO->GetClass()->GetName());
+            }
+        }
+        else if (bIsSaveableComponent)
+        {
+            ValidNativeComponentClassNames.Add(CurrentClass->GetName());
+
+            if (USaveableComponent* CDO = CurrentClass->GetDefaultObject<USaveableComponent>())
+            {
+                CDO->SetupSaveMigrateLogic();
+                AlreadySetupClassSet.Add(CDO->GetClass());
+                UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class (Native Component)"), *CDO->GetClass()->GetName());
             }
         }
     }
 
-
+    // 2. Scan Blueprint Assets
     FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
     IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
-    
-
     AssetRegistry.SearchAllAssets(true);
 
     FARFilter Filter;
@@ -168,20 +186,72 @@ void USaveSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
     for (const FAssetData& Asset : AssetList)
     {
+        bool bIsSaveableActor = false;
+        bool bIsSaveableComponent = false;
+
+        // Check BP-implemented interfaces
         FString ImplementedInterfaces;
         if (Asset.GetTagValue(FBlueprintTags::ImplementedInterfaces, ImplementedInterfaces))
         {
             if (ImplementedInterfaces.Contains(TEXT("SaveableActor")))
             {
-            	FString ClassPath = Asset.ToSoftObjectPath().ToString() + TEXT("_C");
-				if (UClass* LoadedBPClass = LoadClass<AActor>(nullptr, *ClassPath);
-					LoadedBPClass && !AlreadySetupClassSet.Contains(LoadedBPClass))        
-				{
+                bIsSaveableActor = true;
+            }
+        }
+
+        // Check native parent class for deep inheritance (C++ Parent -> BP Child)
+        FString NativeParentClass;
+        if (Asset.GetTagValue(FBlueprintTags::NativeParentClassPath, NativeParentClass))
+        {
+            if (!bIsSaveableActor)
+            {
+                for (const FString& ValidActorName : ValidNativeActorClassNames)
+                {
+                    if (NativeParentClass.Contains(ValidActorName))
+                    {
+                        bIsSaveableActor = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!bIsSaveableActor && !bIsSaveableComponent)
+            {
+                for (const FString& ValidComponentName : ValidNativeComponentClassNames)
+                {
+                    if (NativeParentClass.Contains(ValidComponentName))
+                    {
+                        bIsSaveableComponent = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. Load and register
+        if (bIsSaveableActor || bIsSaveableComponent)
+        {
+            FString ClassPath = Asset.ToSoftObjectPath().ToString() + TEXT("_C");
+            
+            if (UClass* LoadedBPClass = LoadClass<UObject>(nullptr, *ClassPath);
+                LoadedBPClass && !AlreadySetupClassSet.Contains(LoadedBPClass))        
+            {
+                if (bIsSaveableActor)
+                {
                     if (AActor* CDO = LoadedBPClass->GetDefaultObject<AActor>())
                     {
                         ISaveableActor::Execute_SetupSaveMigrateLogic(CDO);
-                    	AlreadySetupClassSet.Add(LoadedBPClass);
-                    	UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class"), *CDO->GetClass()->GetName())
+                        AlreadySetupClassSet.Add(LoadedBPClass);
+                        UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class (BP Actor)"), *CDO->GetClass()->GetName());
+                    }
+                }
+                else if (bIsSaveableComponent)
+                {
+                    if (USaveableComponent* CDO = LoadedBPClass->GetDefaultObject<USaveableComponent>())
+                    {
+                        CDO->SetupSaveMigrateLogic();
+                        AlreadySetupClassSet.Add(LoadedBPClass);
+                        UE_LOG(LogSaveSystem, Verbose, TEXT("Register of the migration for the %s class (BP Component)"), *CDO->GetClass()->GetName());
                     }
                 }
             }
@@ -203,7 +273,7 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(USaveComponent* SaveC
 		return NullOpt;
 	}
 
-	SaveComp->OnPreSave();
+	SaveComp->OnPreSave.Broadcast();
 	
 	FObjectSaveData SaveData;
 	SaveData.bIsDynamicSpawned = SaveComp->GetIsDynamicSpawned();
@@ -290,7 +360,7 @@ TOptional<FObjectSaveData> FSaveSerializer::SerializeActor(USaveComponent* SaveC
 		SaveData.Components.Add(MoveTemp(ComponentSaveData));
 		++SaveData.ComponentsCount;
 	}
-	SaveComp->OnPostSave();
+	SaveComp->OnPostSave.Broadcast();
 	return SaveData;
 }
 
@@ -346,7 +416,7 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 		return;
 	}
 	
-	SaveComp->OnPreLoad();
+	SaveComp->OnPreLoad.Broadcast();
 
 	//--------------------------------Migrating logic------------------------------------------
 
@@ -431,7 +501,7 @@ void FSaveSerializer::DeserializeActor(UObject* WorldContext, const FObjectSaveD
 		Component->OnPostLoad();
 	}
 
-	SaveComp->OnPostLoad();
+	SaveComp->OnPostLoad.Broadcast();
 }
 
 

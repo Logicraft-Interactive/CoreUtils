@@ -3,8 +3,10 @@
 
 #include "TestSavableActor.h"
 
+#include "Chain.h"
 #include "LogCategory.h"
 #include "TestSavableActorComponent.h"
+#include "SaveSystem/SaveSubsystem.h"
 
 
 FString UTestSavableComponent_Save::GetSaveVersion_Implementation()
@@ -32,4 +34,14 @@ void ATestSavableActor::BeginPlay()
 void ATestSavableActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	Chain::StartChain(GetGameInstance())
+	.Transform([](UGameInstance* GameInstance)
+	{
+		return GameInstance->GetSubsystem<USaveSubsystem>();
+	})
+	.Execute([](USaveSubsystem* SaveSubsystem)
+	{
+		SaveSubsystem->SaveWorld(TEXT("SlotTest"), TEXT("1.0.0"));
+	});
 }

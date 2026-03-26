@@ -85,19 +85,3 @@ TMap<UClass*, USaveComponent::FDelegateMapType>& USaveComponent::GetAllMigrateDe
 {
 	return MigratesDelegateMap;
 }
-
-void USaveComponent::OnPreSave_Implementation()
-{
-}
-
-void USaveComponent::OnPostSave_Implementation()
-{
-}
-
-void USaveComponent::OnPreLoad_Implementation()
-{
-}
-
-void USaveComponent::OnPostLoad_Implementation()
-{
-}

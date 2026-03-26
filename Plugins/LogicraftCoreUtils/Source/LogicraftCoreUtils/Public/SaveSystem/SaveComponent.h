@@ -16,7 +16,7 @@
  * so migration logic can remap or default values as needed.
  */
 DECLARE_DYNAMIC_DELEGATE_FourParams(FComponentMigrateEventSignature, AActor*, Actor, FString, FromVersion, FString, ToVersion, const TArray<FPropertySaveData>&, OldPropertyArray);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FSetupMigrateLogicSignature);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSaveSystemTriggerSignature);
 
 /**
  * USaveComponent
@@ -117,7 +117,8 @@ public:
 			MigratesDelegateMap.Add(Class);
 		}
 		
-		MigratesDelegateMap[Class].Add(FromVersion, [MigrateLogic = Forward<Func>(Lambda), ToVersion](AActor* Actor, FString From, const TArray<FPropertySaveData>& PropertyArray)
+		MigratesDelegateMap[Class].Add(FromVersion, [MigrateLogic = Forward<Func>(Lambda), ToVersion]
+			(AActor* Actor, FString From, const TArray<FPropertySaveData>& PropertyArray)
 		{
 			MigrateLogic(Actor, From, ToVersion, PropertyArray);
 			return ToVersion;
@@ -132,17 +133,17 @@ public:
 
 	// ---- Serialization lifecycle callbacks ----
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Save System")
-	void OnPreSave();
+	UPROPERTY(BlueprintAssignable, Category = "Save System")
+	FOnSaveSystemTriggerSignature OnPreSave;
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Save System")
-	void OnPostSave();
+	UPROPERTY(BlueprintAssignable, Category = "Save System")
+	FOnSaveSystemTriggerSignature OnPostSave;
 	
-	UFUNCTION(BlueprintNativeEvent, Category = "Save System")
-	void OnPreLoad();
+	UPROPERTY(BlueprintAssignable, Category = "Save System")
+	FOnSaveSystemTriggerSignature OnPreLoad;
 
-	UFUNCTION(BlueprintNativeEvent, Category = "Save System")
-	void OnPostLoad();
+	UPROPERTY(BlueprintAssignable, Category = "Save System")
+	FOnSaveSystemTriggerSignature OnPostLoad;
 
 protected:
 	
