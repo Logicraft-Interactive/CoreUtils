@@ -10,7 +10,7 @@
 #include "SaveSystem/SaveSubsystem.h"
 #include "SaveSystem/SaveData.h"
 #include "SaveSystem/SaveComponent.h"
-#include "Test/SavableTestActor.h"
+#include "SavableTestActor.h"
 
 // --- TEST CONSTANTS ---
 static const int32 SaveBenchmarkCount = 5000;

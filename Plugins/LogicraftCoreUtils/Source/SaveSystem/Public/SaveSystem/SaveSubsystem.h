@@ -17,7 +17,7 @@ class USaveableComponent;
  * to and from FObjectSaveData. Handles property iteration, binary serialization
  * via FStructuredArchive, type checking, and version migration dispatch.
  */
-struct FSaveSerializer
+struct SAVESYSTEM_API FSaveSerializer
 {
 private:
 	/** @brief Returns the C++ type string for a given FProperty (used for type-mismatch detection). */
@@ -88,7 +88,7 @@ public:
  * per-class migration delegate maps.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API USaveSubsystem : public UGameInstanceSubsystem
+class SAVESYSTEM_API USaveSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 

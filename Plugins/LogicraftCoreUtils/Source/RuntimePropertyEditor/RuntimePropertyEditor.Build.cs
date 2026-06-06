@@ -1,4 +1,5 @@
-﻿using UnrealBuildTool;
+﻿using System.IO;
+using UnrealBuildTool;
 
 public class RuntimePropertyEditor : ModuleRules
 {
@@ -6,10 +7,15 @@ public class RuntimePropertyEditor : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Public", "RuntimePropertyEditor"));
+        
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
                 "Core",
+                "Slate",
+                "SlateCore",
+                "DeveloperSettings"
             }
         );
 
@@ -18,8 +24,8 @@ public class RuntimePropertyEditor : ModuleRules
             {
                 "CoreUObject",
                 "Engine",
-                "Slate",
-                "SlateCore"
+                "CoreUtils",
+                "InputCore"
             }
         );
     }

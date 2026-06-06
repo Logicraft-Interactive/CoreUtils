@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "EventBusTestListener.generated.h"
+#include "EventBusTestObject.generated.h"
 
 /**
  * Minimal UObject used in EventBus automation tests.
@@ -12,7 +12,7 @@
  * Must not be used outside of test code.
  */
 UCLASS()
-class UEventBusTestListener : public UObject
+class UEventBusTestObject : public UObject
 {
 	GENERATED_BODY()
 

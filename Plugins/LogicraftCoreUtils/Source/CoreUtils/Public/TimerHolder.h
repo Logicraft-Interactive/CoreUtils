@@ -6,13 +6,13 @@
 #include "TimerManager.h"
 #include "Engine/EngineTypes.h"
 #include "Engine/TimerHandle.h"
-#include "Meta/LCUConcepts.h"
+#include "LCUConcepts.h"
 #include "GameFramework/Actor.h"
 
 #define TIMER_HOLDER_ENSURE() \
 ensureMsgf(RetrieveTimerManager(), TEXT("Unable to retrieve the timer manager because no valid context was found."))
 
-struct LOGICRAFTCOREUTILS_API FTimerParameters
+struct COREUTILS_API FTimerParameters
 {
 	bool bIsLooping{ false };
 	float Rate{ 0.f };
@@ -23,7 +23,7 @@ struct LOGICRAFTCOREUTILS_API FTimerParameters
  * A wrapper that contains a timer handle.
  * It uses the RAII idiom to automatically clear the scheduled timer upon destruction.
  */
-class LOGICRAFTCOREUTILS_API FTimerHolder
+class COREUTILS_API FTimerHolder
 {
 	FTimerManager* TimerManager{ nullptr };
 	FTimerHandle TimerHandle{};

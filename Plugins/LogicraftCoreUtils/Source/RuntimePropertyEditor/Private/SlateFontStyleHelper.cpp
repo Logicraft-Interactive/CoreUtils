@@ -19,7 +19,7 @@ FSlateFontInfo SlateFontStyleHelper::GetFontStyleSafe(const FString& FontPath, f
 		return FSlateFontInfo{ FontPath, FontSize };
 	}
 
-	UE_LOG(LogLCU, Error,
+	UE_LOG(LogRPE, Error,
 		TEXT("SlateFontStyleHelper: Unable to load the wanted font [Font Path: %s].\n"
 					 "Loading default font 'Roboto-Regular' instead."), *FontPath)
 	
@@ -48,7 +48,7 @@ FSlateFontInfo SlateFontStyleHelper::GetSlateFontStyleSafe(FStringView FontName,
 		return FSlateFontInfo{ FontPath, FontSize };
 	}
 	
-	UE_LOG(LogLCU, Error,
+	UE_LOG(LogRPE, Error,
 		TEXT("SlateFontStyleHelper: Unable to load the wanted font [Font Path: %s].\n"
 					 "Loading default font 'Roboto-Regular' instead."), *FontPath)
 	

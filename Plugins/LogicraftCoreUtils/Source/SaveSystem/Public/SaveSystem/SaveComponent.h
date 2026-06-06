@@ -37,7 +37,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSaveSystemTriggerSignature);
  * AddMigrateDelegate / AddMigrateDelegateLambda to register migration steps.
  */
 UCLASS(ClassGroup=(SaveSystem), meta=(BlueprintSpawnableComponent), Blueprintable, DisplayName = "Save Component")
-class LOGICRAFTCOREUTILS_API USaveComponent : public UActorComponent
+class SAVESYSTEM_API USaveComponent : public UActorComponent
 {
 	GENERATED_BODY()
 	

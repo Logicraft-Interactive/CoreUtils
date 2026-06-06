@@ -44,6 +44,11 @@
 			"Name": "CoreUtilsMeta",
 			"Type": "DeveloperTool",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CoreUtils",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
 		}
 	],
 	"SupportURL": "https://github.com/Logicraft-Interactive/Core-Utils/issues"

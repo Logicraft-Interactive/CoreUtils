@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
-#include "LinqCustomObject.generated.h"
+#include "LinqTestObject.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API ULinqCustomObject : public UObject
+class ULinqTestObject : public UObject
 {
 	GENERATED_BODY()
 };

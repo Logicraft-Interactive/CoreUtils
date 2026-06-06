@@ -16,7 +16,7 @@ class UPoolable;
  * and how the pool manages memory (expansion and shrinking).
  */
 USTRUCT(Blueprintable, BlueprintType)
-struct LOGICRAFTCOREUTILS_API FPoolSettings 
+struct POOLSYSTEM_API FPoolSettings 
 {
 	GENERATED_BODY()
 	 
@@ -24,7 +24,7 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
 	 * The Actor class to spawn and manage in this pool.
 	 * * Must implement the IPoolable interface.
 	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite, meta = (MustImplement = "/Script/LogicraftCoreUtils.Poolable"))
+	UPROPERTY(EditDefaultsOnly, Category = "Settings", BlueprintReadWrite, meta = (MustImplement = "/Script/PoolSystem.Poolable"))
 	TSubclassOf<AActor> SpawnClass;
 	 
 	/**
@@ -76,7 +76,7 @@ struct LOGICRAFTCOREUTILS_API FPoolSettings
  * making it easy to reuse settings across different pool managers.
  */
 UCLASS(Blueprintable, BlueprintType)
-class LOGICRAFTCOREUTILS_API UPoolSettingsDataAsset : public UPrimaryDataAsset
+class POOLSYSTEM_API UPoolSettingsDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public: 	

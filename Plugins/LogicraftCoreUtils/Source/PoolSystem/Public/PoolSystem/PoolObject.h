@@ -17,7 +17,7 @@ class IPoolable;
  * Handles spawning, retrieving, returning, and dynamically resizing the pool based on settings.
  */
 UCLASS(Blueprintable, BlueprintType)
-class LOGICRAFTCOREUTILS_API UPoolObject : public UObject
+class POOLSYSTEM_API UPoolObject : public UObject
 {
 	GENERATED_BODY()
 

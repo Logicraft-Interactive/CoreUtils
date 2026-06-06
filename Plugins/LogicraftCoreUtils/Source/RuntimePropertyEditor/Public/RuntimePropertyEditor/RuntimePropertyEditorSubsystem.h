@@ -42,7 +42,7 @@
  * Thread Safety: Not thread-safe. All methods must be called on the Game Thread.
  */
 UCLASS(Category = "RuntimePropertyEditor")
-class LOGICRAFTCOREUTILS_API URuntimePropertyEditorSubsystem : public UWorldSubsystem
+class RUNTIMEPROPERTYEDITOR_API URuntimePropertyEditorSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 	

@@ -5,6 +5,10 @@
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
+#if WITH_EDITOR
+UE_DEFINE_GAMEPLAY_TAG_COMMENT(Test_Event_Bus, "Test.Event.Bus", "Tag for event bus testing.");
+#endif
+
 void UEventBus::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);

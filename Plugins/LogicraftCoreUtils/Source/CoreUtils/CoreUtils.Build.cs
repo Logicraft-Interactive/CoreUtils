@@ -1,18 +1,17 @@
-﻿using System.IO;
-using UnrealBuildTool;
+﻿using UnrealBuildTool;
 
-public class SaveSystem : ModuleRules
+public class CoreUtils : ModuleRules
 {
-    public SaveSystem(ReadOnlyTargetRules Target) : base(Target)
+    public CoreUtils(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PrivateIncludePaths.Add(Path.Combine(ModuleDirectory, "Public", "SaveSystem"));
-        
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core"
+                "Core", 
+                "CoreUtilsMeta",
+                "GameplayTags"
             }
         );
 
@@ -22,8 +21,8 @@ public class SaveSystem : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore", 
-                "CoreUtils"
+                "SlateCore",
+                "UnrealEd"
             }
         );
     }

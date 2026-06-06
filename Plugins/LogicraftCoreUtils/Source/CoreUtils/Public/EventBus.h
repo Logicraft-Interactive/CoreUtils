@@ -5,10 +5,15 @@
 #include <string_view>
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "Meta/LCUConcepts.h"
-#include "Meta/LCUTypeTraits.h"
+#include "LCUConcepts.h"
+#include "LCUTypeTraits.h"
+#include "NativeGameplayTags.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "EventBus.generated.h"
+
+#if WITH_EDITOR
+UE_DECLARE_GAMEPLAY_TAG_EXTERN(Test_Event_Bus)
+#endif
 
 /**
  * Define this to make the delegates themselves thread-safe at the cost of performance.
@@ -371,7 +376,7 @@ namespace EventBus
  * In practice, all operations are expected to occur on the GameThread.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API UEventBus : public UGameInstanceSubsystem
+class COREUTILS_API UEventBus : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
 	

@@ -1,7 +1,7 @@
 #include "CoreMinimal.h"
 #include "Misc/AutomationTest.h"
 #include "Linq.h"
-#include "LinqCustomObject.h"
+#include "LinqTestObject.h"
 #include "UObject/Package.h"
 
 // Define a simple test category
@@ -99,7 +99,7 @@ bool FLinqUObjectTest::RunTest(const FString& Parameters)
 	UPackage* Package = GetTransientPackage();
 	
 	// Create mixed objects
-	UObject* ValidObj = NewObject<ULinqCustomObject>(Package);
+	UObject* ValidObj = NewObject<ULinqTestObject>(Package);
 	UObject* NullObj = nullptr;
 	
 	// Note: We use UObject but pretend some are different for the Cast test logic. 

@@ -19,7 +19,12 @@ public class CoreUtilsTests : ModuleRules
                 "CoreUObject",
                 "Engine",
                 "Slate",
-                "SlateCore"
+                "SlateCore",
+                "CoreUtils",
+                "PoolSystem",
+                "SaveSystem",
+                "GameplayTags",
+                "UnrealEd"
             }
         );
     }

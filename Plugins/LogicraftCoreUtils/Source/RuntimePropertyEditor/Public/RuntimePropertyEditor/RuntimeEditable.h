@@ -61,7 +61,7 @@ class URuntimeEditable : public UInterface
  * };
  * @endcode
  */
-class LOGICRAFTCOREUTILS_API IRuntimeEditable
+class RUNTIMEPROPERTYEDITOR_API IRuntimeEditable
 {
 	GENERATED_BODY()
 

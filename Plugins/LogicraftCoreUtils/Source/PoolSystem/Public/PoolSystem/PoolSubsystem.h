@@ -20,7 +20,7 @@ class IPoolable;
  * Get the subsystem via `GetWorld()->GetSubsystem<UPoolSubsystem>()` to create new pools.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API UPoolSubsystem : public UWorldSubsystem
+class POOLSYSTEM_API UPoolSubsystem : public UWorldSubsystem
 {
 	GENERATED_BODY()
 

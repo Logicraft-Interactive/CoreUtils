@@ -26,7 +26,7 @@ class SScrollBox;
  * 
  * Thread Safety: Not thread-safe. Should only be used on the Game Thread.
  */
-class LOGICRAFTCOREUTILS_API FRuntimePropertyBuilder
+class RUNTIMEPROPERTYEDITOR_API FRuntimePropertyBuilder
 {
 public:
 	/** Default constructor. Creates an uninitialized builder (should not be used directly). */

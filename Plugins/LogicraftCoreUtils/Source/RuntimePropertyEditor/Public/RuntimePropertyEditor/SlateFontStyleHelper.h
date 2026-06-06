@@ -23,7 +23,7 @@
  * 
  * Thread Safety: Safe to call from any thread (read-only operations).
  */
-class LOGICRAFTCOREUTILS_API SlateFontStyleHelper
+class RUNTIMEPROPERTYEDITOR_API SlateFontStyleHelper
 {
 public:
 	/**

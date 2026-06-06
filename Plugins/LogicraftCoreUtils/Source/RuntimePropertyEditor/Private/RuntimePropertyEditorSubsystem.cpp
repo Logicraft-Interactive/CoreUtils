@@ -1,6 +1,8 @@
 ﻿// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
 
 #include "RuntimePropertyEditorSubsystem.h"
+
+#include "LogCategory.h"
 #include "RuntimePropertyEditorSettings.h"
 #include "Engine/Engine.h"
 #include "GameFramework/Actor.h"
@@ -200,7 +202,7 @@ void URuntimePropertyEditorSubsystem::SpawnSelectionBox(UWorld& InWorld)
 	
 	if (!SelectionBox.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("RuntimePropertyEditorSubsystem: Failed to spawn selection box!"));
+		UE_LOG(LogRPE, Error, TEXT("RuntimePropertyEditorSubsystem: Failed to spawn selection box!"));
 		return;
 	}
 	
@@ -214,7 +216,7 @@ void URuntimePropertyEditorSubsystem::SpawnSelectionBox(UWorld& InWorld)
 
 	if (!SelectionBoxMesh.IsValid())
 	{
-		UE_LOG(LogTemp, Error, TEXT("URuntimePropertyEditorSubsystem: Failed to create selection box mesh!"));
+		UE_LOG(LogRPE, Error, TEXT("URuntimePropertyEditorSubsystem: Failed to create selection box mesh!"));
 		return;
 	}
 

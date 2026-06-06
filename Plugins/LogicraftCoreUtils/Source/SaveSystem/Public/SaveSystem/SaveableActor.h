@@ -16,7 +16,7 @@ class USaveableActor : public UInterface
 /**
  * 
  */
-class LOGICRAFTCOREUTILS_API ISaveableActor
+class SAVESYSTEM_API ISaveableActor
 {
 	GENERATED_BODY()
 

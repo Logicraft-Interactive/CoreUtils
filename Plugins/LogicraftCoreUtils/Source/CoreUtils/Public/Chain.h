@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <functional>
 
-#include "Meta/LCUConcepts.h"
+#include "LCUConcepts.h"
 
 /**
  * @brief Namespace containing utilities for safe method chaining on UObjects (Monadic pattern).
@@ -24,7 +24,7 @@ namespace Chain
        using CleanType = std::remove_pointer_t<std::remove_cvref_t<T>>;
          
        // Internal logging function to handle error reporting (implemented in cpp).
-       void LOGICRAFTCOREUTILS_API ChainLog(const FString& Msg);
+       void COREUTILS_API ChainLog(const FString& Msg);
        
        /**
         * @brief A wrapper class that holds a UObject pointer and manages safe execution flow.

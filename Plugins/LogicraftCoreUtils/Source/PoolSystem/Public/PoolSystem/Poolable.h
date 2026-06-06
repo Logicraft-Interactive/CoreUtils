@@ -14,7 +14,7 @@ class UPoolObject;
  * Do not modify this class directly; implement functionality in IPoolable instead.
  */
 UINTERFACE(BlueprintType)
-class LOGICRAFTCOREUTILS_API UPoolable : public UInterface
+class POOLSYSTEM_API UPoolable : public UInterface
 {
 	GENERATED_BODY()
 };
@@ -25,7 +25,7 @@ class LOGICRAFTCOREUTILS_API UPoolable : public UInterface
  * Implementing this interface allows an object to receive callbacks when it is
  * spawned from or returned to the pool, and allows the pool to manage its internal index.
  */
-class LOGICRAFTCOREUTILS_API IPoolable
+class POOLSYSTEM_API IPoolable
 {
 	GENERATED_BODY()
 

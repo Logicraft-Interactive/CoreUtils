@@ -5,8 +5,8 @@
 #include "CoreMinimal.h"
 #include <concepts>
 #include <algorithm> // Required for Algo::Sort
-#include "Meta/LCUTypeTraits.h"
-#include "Meta/LCUConcepts.h"
+#include "LCUTypeTraits.h"
+#include "LCUConcepts.h"
 
 /**
  * @namespace Linq

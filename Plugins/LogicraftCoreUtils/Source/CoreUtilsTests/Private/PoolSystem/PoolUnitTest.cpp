@@ -10,7 +10,7 @@
 #include "PoolSystem/PoolObject.h"
 #include "PoolSystem/PoolSettings.h"
 #include "PoolSystem/PoolSubsystem.h"
-#include "Test/PoolableTestActor.h"
+#include "PoolableTestActor.h"
 
 /** En monde éditeur, Destroy() laisse les acteurs en file jusqu’au tick ; EditorDestroyActor les retire tout de suite de la scène. */
 static void DestroyTestActorInWorld(UWorld* World, AActor* Actor)

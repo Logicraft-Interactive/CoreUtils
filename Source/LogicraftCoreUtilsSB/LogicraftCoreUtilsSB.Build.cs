@@ -8,7 +8,20 @@ public class LogicraftCoreUtilsSB : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "GameplayTags", "LogicraftCoreUtils", "Slate", "SlateCore" });
+		PublicDependencyModuleNames.AddRange(new string[]
+		{
+			"Core", 
+			"CoreUObject", 
+			"Engine", 
+			"InputCore", 
+			"GameplayTags", 
+			"CoreUtils",
+			"PoolSystem",
+			"SaveSystem",
+			"RuntimePropertyEditor",
+			"Slate", 
+			"SlateCore"
+		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 

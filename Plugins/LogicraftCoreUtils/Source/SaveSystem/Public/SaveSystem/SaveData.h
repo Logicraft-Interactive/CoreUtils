@@ -119,7 +119,7 @@ struct FObjectSaveData
  * Serialized to / loaded from a named slot via UGameplayStatics.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API ULCUSaveGame : public USaveGame
+class SAVESYSTEM_API ULCUSaveGame : public USaveGame
 {
 	GENERATED_BODY()
 public:

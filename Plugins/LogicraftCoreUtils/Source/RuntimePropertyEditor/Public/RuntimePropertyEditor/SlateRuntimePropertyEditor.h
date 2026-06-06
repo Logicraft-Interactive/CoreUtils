@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "RuntimePropertyEditor/RuntimeEditable.h"
+#include "RuntimeEditable.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Views/SListView.h"
 
@@ -57,7 +57,7 @@ DECLARE_DELEGATE_TwoParams(FOnEditableObjectSelectionChanged, TWeakObjectPtr<> S
  * 
  * Thread Safety: Not thread-safe. Must be used on the Game Thread only.
  */
-class LOGICRAFTCOREUTILS_API SRuntimePropertyEditor : public SCompoundWidget
+class RUNTIMEPROPERTYEDITOR_API SRuntimePropertyEditor : public SCompoundWidget
 {
 	/** Type alias for list item sources (weak pointers to UObjects) */
 	using FListItemSource = TWeakObjectPtr<>;

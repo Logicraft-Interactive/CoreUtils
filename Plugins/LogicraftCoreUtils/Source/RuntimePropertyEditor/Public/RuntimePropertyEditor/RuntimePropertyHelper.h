@@ -23,7 +23,7 @@
  * Thread Safety: Not thread-safe. Must be called on the Game Thread.
  */
 UCLASS()
-class LOGICRAFTCOREUTILS_API URuntimePropertyHelper : public UBlueprintFunctionLibrary
+class RUNTIMEPROPERTYEDITOR_API URuntimePropertyHelper : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 

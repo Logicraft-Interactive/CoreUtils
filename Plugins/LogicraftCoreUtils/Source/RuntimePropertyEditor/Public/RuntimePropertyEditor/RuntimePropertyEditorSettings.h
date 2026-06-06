@@ -24,7 +24,7 @@ class UStaticMesh;
  * Thread Safety: Read-only after initialization. Safe to access from any thread.
  */
 UCLASS(Config = Game, DefaultConfig, meta = (DisplayName = "Runtime Property Editor"))
-class LOGICRAFTCOREUTILS_API URuntimePropertyEditorSettings : public UDeveloperSettings
+class RUNTIMEPROPERTYEDITOR_API URuntimePropertyEditorSettings : public UDeveloperSettings
 {
 	GENERATED_BODY()
 

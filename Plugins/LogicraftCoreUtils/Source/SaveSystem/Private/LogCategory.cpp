@@ -1,3 +1,6 @@
 ﻿// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
 
-#include "PoolableTestActor.h"
+
+#include "LogCategory.h"
+
+DEFINE_LOG_CATEGORY(LogSaveSystem)

@@ -21,15 +21,13 @@ BEGIN_DEFINE_SPEC(FEventBusSpec, "Logicraft.EventBus", EAutomationTestFlags::Edi
     FGameplayTag TestTag;
 END_DEFINE_SPEC(FEventBusSpec)
 
-UE_DEFINE_GAMEPLAY_TAG_COMMENT(Test_Event_Bus, "Test.Event.Bus", "Tag for event bus testing.");
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 // UEventBusTestListener is declared in its own header so UHT can process it.
 // UCLASS() macros cannot be defined in .cpp files as UHT does not scan them.
-#include "EventBusTestListener.h"
+#include "EventBusTestObject.h"
 
 // ---------------------------------------------------------------------------
 // Spec definition
@@ -287,10 +285,10 @@ void FEventBusSpec::Define()
     {
         It("Should remove all delegates bound to a given object", [this]
         {
-            UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
+            UEventBusTestObject* Listener = NewObject<UEventBusTestObject>();
 
-            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
-            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestObject::OnEvent);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestObject::OnEvent);
 
             const int32 Removed = EventBus->RemoveAll(TestTag, Listener);
 
@@ -310,11 +308,11 @@ void FEventBusSpec::Define()
 
         It("Should not affect subscribers bound to a different object", [this]
         {
-            UEventBusTestListener* ListenerA = NewObject<UEventBusTestListener>();
-            UEventBusTestListener* ListenerB = NewObject<UEventBusTestListener>();
+            UEventBusTestObject* ListenerA = NewObject<UEventBusTestObject>();
+            UEventBusTestObject* ListenerB = NewObject<UEventBusTestObject>();
 
-            EventBus->AddUObject(TestTag, ListenerA, &UEventBusTestListener::OnEvent);
-            EventBus->AddUObject(TestTag, ListenerB, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, ListenerA, &UEventBusTestObject::OnEvent);
+            EventBus->AddUObject(TestTag, ListenerB, &UEventBusTestObject::OnEvent);
 
             EventBus->RemoveAll(TestTag, ListenerA);
 
@@ -349,10 +347,10 @@ void FEventBusSpec::Define()
 
         It("IsBoundToObject should correctly identify a bound UObject", [this]
         {
-            UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
+            UEventBusTestObject* Listener = NewObject<UEventBusTestObject>();
 
             TestFalse("Not bound before Add",   EventBus->IsBoundToObject(TestTag, Listener));
-            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestObject::OnEvent);
             TestTrue("Bound after AddUObject",  EventBus->IsBoundToObject(TestTag, Listener));
         });
 
@@ -371,9 +369,9 @@ void FEventBusSpec::Define()
     {
         It("AddUObject should deliver events to a UObject method", [this]
         {
-            UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
+            UEventBusTestObject* Listener = NewObject<UEventBusTestObject>();
 
-            EventBus->AddUObject(TestTag, Listener, &UEventBusTestListener::OnEvent);
+            EventBus->AddUObject(TestTag, Listener, &UEventBusTestObject::OnEvent);
             EventBus->Broadcast(TestTag, 7);
 
             TestEqual("UObject method received value", Listener->LastValue,  7);
@@ -383,7 +381,7 @@ void FEventBusSpec::Define()
         It("AddWeakLambda should not fire after the UObject is destroyed", [this]
         {
             int32 CallCount = 0;
-            UEventBusTestListener* Listener = NewObject<UEventBusTestListener>();
+            UEventBusTestObject* Listener = NewObject<UEventBusTestObject>();
 
             EventBus->AddWeakLambda(TestTag, Listener, [&](int32) { ++CallCount; });
 
