@@ -19,6 +19,31 @@
 			"Name": "LogicraftCoreUtils",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "RuntimePropertyEditor",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "PoolSystem",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "SaveSystem",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CoreUtilsTests",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default"
+		},
+		{
+			"Name": "CoreUtilsMeta",
+			"Type": "DeveloperTool",
+			"LoadingPhase": "Default"
 		}
 	],
 	"SupportURL": "https://github.com/Logicraft-Interactive/Core-Utils/issues"
