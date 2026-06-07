@@ -16,11 +16,6 @@
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "LogicraftCoreUtils",
-			"Type": "Runtime",
-			"LoadingPhase": "Default"
-		},
-		{
 			"Name": "RuntimePropertyEditor",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"

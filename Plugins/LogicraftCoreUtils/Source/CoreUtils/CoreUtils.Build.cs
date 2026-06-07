@@ -14,7 +14,7 @@ public class CoreUtils : ModuleRules
                 "GameplayTags"
             }
         );
-
+    
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
@@ -22,8 +22,12 @@ public class CoreUtils : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "UnrealEd"
             }
         );
+
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.AddRange([ "UnrealEd" ]);
+        }
     }
 }
