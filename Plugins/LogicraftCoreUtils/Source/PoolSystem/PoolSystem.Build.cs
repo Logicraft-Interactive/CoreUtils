@@ -12,7 +12,9 @@ public class PoolSystem : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core", 
+                "Core",
+                "CoreUObject",
+                "Engine",
                 "CoreUtils"
             }
         );
@@ -20,8 +22,6 @@ public class PoolSystem : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "CoreUObject",
-                "Engine",
                 "Slate",
                 "SlateCore"
             }
