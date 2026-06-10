@@ -27,7 +27,7 @@ public class CoreUtils : ModuleRules
 
         if (Target.bBuildEditor)
         {
-            PrivateDependencyModuleNames.AddRange([ "UnrealEd" ]);
+            PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd" });
         }
     }
 }
