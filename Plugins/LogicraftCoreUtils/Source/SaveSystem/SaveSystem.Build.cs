@@ -12,10 +12,11 @@ public class SaveSystem : ModuleRules
         PublicDependencyModuleNames.AddRange(
             new string[]
             {
-                "Core"
+                "Core",
+                "CoreUObject",
+                "Engine"
             }
         );
-
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
