@@ -13,6 +13,8 @@ public class RuntimePropertyEditor : ModuleRules
             new string[]
             {
                 "Core",
+                "CoreUObject",
+                "Engine",
                 "Slate",
                 "SlateCore",
                 "DeveloperSettings"
@@ -22,8 +24,6 @@ public class RuntimePropertyEditor : ModuleRules
         PrivateDependencyModuleNames.AddRange(
             new string[]
             {
-                "CoreUObject",
-                "Engine",
                 "CoreUtils",
                 "InputCore"
             }
