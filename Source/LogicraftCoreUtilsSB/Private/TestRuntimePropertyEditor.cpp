@@ -54,5 +54,8 @@ void ATestRuntimePropertyEditor::OnPropertiesDisplay(FRuntimePropertyBuilder& Pr
 		.AddCategory(TEXT("Category"))
 		.AddNumericVector<double, 3>(TEXT("Scale"),
 			[this]{ return GetActorScale3D(); },
-			[this](const FVector& NewScale){ SetActorScale3D(NewScale); });
+			[this](const FVector& NewScale){ SetActorScale3D(NewScale); })
+		.AddEnum<EMyEnum>(TEXT("My Enum"), 
+			[this]{ return MyEnum; }, 
+			[this](const EMyEnum Value){ MyEnum = Value; });
 }

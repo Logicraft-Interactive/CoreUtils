@@ -1,6 +1,6 @@
 ﻿// Copyright (c) 2026 Logicraft Interactive. All Rights Reserved.
 
-#include "SlateRuntimePropertyEditor.h"
+#include "SRuntimePropertyEditor.h"
 #include "Widgets/Layout/SScrollBox.h"
 #include "SlateOptMacros.h"
 

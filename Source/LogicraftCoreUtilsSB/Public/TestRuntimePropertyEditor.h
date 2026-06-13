@@ -8,6 +8,15 @@
 #include "RuntimePropertyEditor/RuntimeEditable.h"
 #include "TestRuntimePropertyEditor.generated.h"
 
+
+UENUM()
+enum EMyEnum
+{
+	Super,
+	Salut,
+	Prouta
+};
+
 UCLASS()
 class LOGICRAFTCOREUTILSSB_API ATestRuntimePropertyEditor : public AActor, public IRuntimeEditable
 {
@@ -18,6 +27,7 @@ public:
 
 	FTimerHolder DestroySelf;
 		
+	EMyEnum MyEnum;
 protected:
 	virtual void BeginPlay() override;
 

@@ -20,8 +20,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 #include "LCUTypeTraits.h"
+#include "GameFramework/Actor.h"
 
 namespace Concept
 {

@@ -114,15 +114,18 @@ void URuntimePropertyEditorSubsystem::UnRegisterEditableObject(
 	const TSharedRef RemovedScrollBox{ EditableObjectsUIProperties[RuntimeEditableObject] };
 	EditableObjectsUIProperties.Remove(RuntimeEditableObject);
 	
-	if (RuntimePropertyEditor.IsValid() && RuntimePropertyEditor->IsSelected(RemovedScrollBox))
+	if (RuntimePropertyEditor.IsValid())
 	{
-		RuntimePropertyEditor->DisplayObjectProperties(nullptr);
+		if (RuntimePropertyEditor->IsSelected(RemovedScrollBox))
+		{
+			RuntimePropertyEditor->DisplayObjectProperties(nullptr);
 		
-		constexpr bool IsHidden{ true };
-		HideSelectionBox(IsHidden, nullptr);
+			constexpr bool IsHidden{ true };
+			HideSelectionBox(IsHidden, nullptr);	
+		}
+		
+		RuntimePropertyEditor->RefreshEditableObjectList();
 	}
-
-	RuntimePropertyEditor->RefreshEditableObjectList();
 }
 
 TSharedRef<ITableRow> URuntimePropertyEditorSubsystem::OnEditableObjectAdded(TWeakObjectPtr<> EditableObject,

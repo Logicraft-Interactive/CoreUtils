@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "SRuntimePropertyBuilderEnumCombo.h"
 #include "Widgets/Input/SButton.h"
 #include "Widgets/Input/SCheckBox.h"
 #include "Widgets/Input/SRotatorInputBox.h"
@@ -266,6 +267,17 @@ public:
 					OnClicked();
 					return FReply::Handled();
 				}));
+	}
+	
+	template<typename TEnum, typename TOnValueGet, typename TOnValueSet>
+		requires std::is_enum_v<TEnum>
+	FRuntimePropertyBuilder& AddEnum(FStringView PropertyName, TOnValueGet&& OnValueGet, TOnValueSet OnValueSet)
+	{
+		return AddRowProperty(PropertyName, 
+			SNew(SRuntimePropertyBuilderEnumCombo<TEnum>)
+				.OnValueGet_Lambda(Forward<TOnValueGet>(OnValueGet))
+				.OnValueSet_Lambda(Forward<TOnValueSet>(OnValueSet))
+			);
 	}
 
 	/**

@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "RuntimeEditable.h"
-#include "SlateRuntimePropertyEditor.h"
+#include "SRuntimePropertyEditor.h"
 #include "Subsystems/WorldSubsystem.h"
 #include "Engine/EngineTypes.h"
 #include "Components/SceneComponent.h"

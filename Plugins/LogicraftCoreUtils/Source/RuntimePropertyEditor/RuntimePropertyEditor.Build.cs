@@ -17,7 +17,8 @@ public class RuntimePropertyEditor : ModuleRules
                 "Engine",
                 "Slate",
                 "SlateCore",
-                "DeveloperSettings"
+                "DeveloperSettings",
+                "CoreUtilsMeta"
             }
         );
 

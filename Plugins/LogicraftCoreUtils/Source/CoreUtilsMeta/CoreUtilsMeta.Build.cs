@@ -1,12 +1,19 @@
-﻿using UnrealBuildTool;
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using UnrealBuildTool;
 
 public class CoreUtilsMeta : ModuleRules
 {
     public CoreUtilsMeta(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
-
-        PublicIncludePaths.Add(ModuleDirectory + "/Public");
+        
+        PublicIncludePaths.AddRange(
+            new string[]
+            {
+                ModuleDirectory + "/Public"
+            });
         
         PublicDependencyModuleNames.AddRange(
             new string[]
